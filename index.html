@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coogee Seahorses JRUFC</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0a1628;
+    --navy-mid: #132040;
+    --teal: #00c9a7;
+    --teal-dim: #00a085;
+    --white: #f5f7fa;
+    --muted: #8a9ab8;
+    --border: rgba(255,255,255,0.08);
+    --card: rgba(255,255,255,0.05);
+    --radius: 18px;
+  }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,201,167,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 110%, rgba(0,80,180,0.12) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 420px;
+    width: 100%;
+    padding: 2rem 1.25rem 3rem;
+    text-align: center;
+  }
+
+  .badge {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    margin: 0 auto 1.25rem;
+    box-shadow: 0 8px 32px rgba(0,201,167,0.25);
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.4rem, 10vw, 3.2rem);
+    letter-spacing: 0.04em;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  h1 span { color: var(--teal); }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 2.5rem;
+    letter-spacing: 0.02em;
+  }
+
+  .cards { display: flex; flex-direction: column; gap: 14px; margin-bottom: 2rem; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    text-align: left;
+  }
+
+  .card:hover, .card:active {
+    border-color: var(--teal);
+    background: rgba(0,201,167,0.07);
+    transform: translateY(-1px);
+  }
+
+  .card-icon {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .icon-manager { background: rgba(0,122,255,0.15); }
+  .icon-avail   { background: rgba(0,201,167,0.15); }
+
+  .card-text { flex: 1; }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 3px;
+    color: var(--white);
+  }
+
+  .card-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .card-arrow {
+    font-size: 18px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .card.primary { border-color: rgba(0,122,255,0.3); }
+  .card.primary .card-title { color: #6eb0ff; }
+
+  .card.accent { border-color: rgba(0,201,167,0.3); }
+  .card.accent .card-title { color: var(--teal); }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1.5rem 0;
+  }
+
+  .footer {
+    font-size: 12px;
+    color: var(--muted);
+    opacity: 0.6;
+  }
+
+  .next-game {
+    background: rgba(0,201,167,0.08);
+    border: 1px solid rgba(0,201,167,0.2);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 2rem;
+    font-size: 13px;
+    color: var(--teal);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+  }
+
+  .next-game strong { color: var(--white); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="badge">🏉</div>
+  <h1>Coogee <span>Seahorses</span></h1>
+  <p class="subtitle">Coogee Seahorses JRUFC · Under 11 · 2026</p>
+
+  <div class="next-game">
+    <span>📅</span>
+    <div>
+      <strong>Round 3 — Fri 8 May</strong><br>
+      vs Rockdale · C.A Redmond Oval · 7:20pm
+    </div>
+  </div>
+
+  <div class="cards">
+
+    <a href="availability-form.html" class="card accent">
+      <div class="card-icon icon-avail">✅</div>
+      <div class="card-text">
+        <div class="card-title">Are you available?</div>
+        <div class="card-desc">Let your manager know if you can make the next game</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </a>
+
+    <a href="team-manager.html" class="card primary">
+      <div class="card-icon icon-manager">📋</div>
+      <div class="card-text">
+        <div class="card-title">Team Manager</div>
+        <div class="card-desc">Build the team, assign positions and export to Rugby Xplorer</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </a>
+
+  </div>
+
+  <div class="divider"></div>
+  <p class="footer">Coogee Seahorses JRUFC · SJRU Under 11 · 2026 Season</p>
+
+</div>
+</body>
+</html>

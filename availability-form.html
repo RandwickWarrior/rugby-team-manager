@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Are you available? — Coogee Seahorses</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0a1628;
+    --navy-mid: #132040;
+    --navy-light: #1e3260;
+    --teal: #00c9a7;
+    --teal-dim: #00a085;
+    --white: #f5f7fa;
+    --muted: #8a9ab8;
+    --border: rgba(255,255,255,0.08);
+    --card: rgba(255,255,255,0.04);
+    --card-hover: rgba(0,201,167,0.06);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,201,167,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 100%, rgba(0,100,200,0.1) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    animation: fadeDown 0.6s ease both;
+  }
+
+  .club-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+    border-radius: 50%;
+    margin-bottom: 1rem;
+    font-size: 26px;
+  }
+
+  .header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.2rem, 8vw, 3rem);
+    letter-spacing: 0.04em;
+    line-height: 1;
+    color: var(--white);
+    margin-bottom: 0.5rem;
+  }
+
+  .header h1 span { color: var(--teal); }
+
+  .match-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-top: 1.25rem;
+    text-align: left;
+  }
+
+  .match-label {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .match-detail { font-size: 15px; font-weight: 500; color: var(--white); margin-bottom: 3px; }
+  .match-meta { font-size: 13px; color: var(--muted); }
+
+  /* Steps */
+  .step {
+    animation: fadeUp 0.5s ease both;
+  }
+  .step-1 { animation-delay: 0.1s; }
+  .step-2 { animation-delay: 0.2s; }
+  .step-3 { animation-delay: 0.3s; }
+  .step-4 { animation-delay: 0.4s; }
+
+  .step-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .step-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section { margin-bottom: 2rem; }
+
+  /* Player selector */
+  .player-select {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    padding: 14px 16px;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a9ab8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+  }
+
+  .player-select:focus {
+    outline: none;
+    border-color: var(--teal);
+    background-color: var(--card-hover);
+  }
+
+  .player-select option { background: var(--navy-mid); color: var(--white); }
+
+  /* Availability choices */
+  .choices { display: flex; flex-direction: column; gap: 10px; }
+
+  .choice {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .choice:active { transform: scale(0.98); }
+
+  .choice input[type=radio] { display: none; }
+
+  .choice-icon {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+
+  .choice-text { flex: 1; }
+  .choice-title { font-size: 15px; font-weight: 500; }
+  .choice-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .choice-check {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    flex-shrink: 0;
+    transition: all 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Selected states */
+  .choice.selected-yes {
+    border-color: var(--teal);
+    background: rgba(0,201,167,0.08);
+  }
+  .choice.selected-yes .choice-check {
+    background: var(--teal);
+    border-color: var(--teal);
+  }
+  .choice.selected-yes .choice-check::after {
+    content: '✓';
+    font-size: 12px;
+    color: var(--navy);
+    font-weight: 700;
+  }
+
+  .choice.selected-no {
+    border-color: #e25555;
+    background: rgba(226,85,85,0.08);
+  }
+  .choice.selected-no .choice-check {
+    background: #e25555;
+    border-color: #e25555;
+  }
+  .choice.selected-no .choice-check::after {
+    content: '✓';
+    font-size: 12px;
+    color: white;
+    font-weight: 700;
+  }
+
+  .choice.selected-maybe {
+    border-color: #f5a623;
+    background: rgba(245,166,35,0.08);
+  }
+  .choice.selected-maybe .choice-check {
+    background: #f5a623;
+    border-color: #f5a623;
+  }
+  .choice.selected-maybe .choice-check::after {
+    content: '✓';
+    font-size: 12px;
+    color: var(--navy);
+    font-weight: 700;
+  }
+
+  /* Yes icon backgrounds */
+  .icon-yes { background: rgba(0,201,167,0.15); }
+  .icon-no { background: rgba(226,85,85,0.15); }
+  .icon-maybe { background: rgba(245,166,35,0.15); }
+
+  /* Ride section (conditional) */
+  .ride-section {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.4s ease, opacity 0.3s ease;
+    pointer-events: none;
+  }
+  .ride-section.visible {
+    max-height: 200px;
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .ride-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.2s;
+  }
+
+  .ride-toggle.active {
+    border-color: #f5a623;
+    background: rgba(245,166,35,0.08);
+  }
+
+  .ride-toggle-text { font-size: 15px; font-weight: 500; }
+  .ride-toggle-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .toggle-pill {
+    width: 44px; height: 26px;
+    border-radius: 13px;
+    background: var(--navy-light);
+    border: 1px solid var(--border);
+    position: relative;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+
+  .toggle-pill::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .toggle-pill.on {
+    background: rgba(245,166,35,0.3);
+    border-color: #f5a623;
+  }
+  .toggle-pill.on::after {
+    left: 21px;
+    background: #f5a623;
+  }
+
+  /* Notes */
+  .notes-input {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    padding: 14px 16px;
+    resize: none;
+    min-height: 90px;
+    transition: border-color 0.2s;
+    line-height: 1.5;
+  }
+
+  .notes-input::placeholder { color: var(--muted); }
+  .notes-input:focus { outline: none; border-color: var(--teal); }
+
+  /* Submit button */
+  .submit-btn {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--navy);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Success screen */
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 3rem 1rem;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .success-icon {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .success-screen h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+
+  .success-screen p { color: var(--muted); font-size: 15px; line-height: 1.6; }
+
+  .response-summary {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin: 1.5rem auto;
+    max-width: 320px;
+    text-align: left;
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 14px;
+  }
+
+  .summary-row + .summary-row { border-top: 1px solid var(--border); }
+  .summary-key { color: var(--muted); }
+  .summary-val { font-weight: 500; }
+  .summary-val.yes { color: var(--teal); }
+  .summary-val.no { color: #e25555; }
+  .summary-val.maybe { color: #f5a623; }
+
+  .another-btn {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 10px 24px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+    background: none;
+    transition: all 0.2s;
+  }
+  .another-btn:hover { border-color: var(--teal); color: var(--teal); }
+
+  /* Responses saved panel */
+  .saved-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-top: 2rem;
+  }
+
+  .saved-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .saved-title {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--teal);
+    font-weight: 600;
+  }
+
+  .saved-count {
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .saved-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .saved-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    font-size: 13px;
+  }
+
+  .saved-name { flex: 1; font-weight: 500; }
+  .saved-status { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+  .status-yes { background: rgba(0,201,167,0.15); color: var(--teal); }
+  .status-no { background: rgba(226,85,85,0.15); color: #e25555; }
+  .status-maybe { background: rgba(245,166,35,0.15); color: #f5a623; }
+
+  .copy-responses-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .copy-responses-btn:hover { border-color: var(--teal); color: var(--teal); }
+
+  .clear-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="club-badge">🏉</div>
+    <h1>Are You <span>Available?</span></h1>
+    <div class="match-card" id="match-info">
+      <div class="match-label">Next match</div>
+      <div class="match-detail" id="match-opponent">Opponent TBC</div>
+      <div class="match-meta" id="match-meta">Details coming soon</div>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <form id="avail-form">
+
+    <!-- Step 1: Player -->
+    <div class="section step step-1">
+      <div class="step-label">Step 1 — Who are you?</div>
+      <select class="player-select" id="player-select" required>
+        <option value="">Select your name…</option>
+        <option value="Rafferty Moffitt">#14 Rafferty Moffitt</option>
+        <option value="Theo Deichsel">#1 Theo Deichsel</option>
+        <option value="William English">#4 William English</option>
+        <option value="Archer Price">#20 Archer Price</option>
+        <option value="Jackson Kendall">#5 Jackson Kendall</option>
+        <option value="Patrick Keenen">#3 Patrick Keenen</option>
+        <option value="Sasha Hayim">#18 Sasha Hayim</option>
+        <option value="Xavier Reddy">#15 Xavier Reddy</option>
+        <option value="Michael Dunworth">#2 Michael Dunworth</option>
+        <option value="Thomas Morgan">#11 Thomas Morgan</option>
+        <option value="Henry Scott">#17 Henry Scott</option>
+        <option value="Edward Macassey">#10 Edward Macassey</option>
+        <option value="Lachlan McDonald">#12 Lachlan McDonald</option>
+        <option value="Max Boss">#9 Max Boss</option>
+        <option value="Nathan Evans">#13 Nathan Evans</option>
+        <option value="Beau Hack">#6 Beau Hack</option>
+        <option value="Teddy Russell">#8 Teddy Russell</option>
+        <option value="Kycen Puroku">#7 Kycen Puroku</option>
+        <option value="Freddie Kirrane">#19 Freddie Kirrane</option>
+        <option value="Elliot Dean">#16 Elliot Dean</option>
+        <option value="Watene Falemanu">#21 Watene Falemanu</option>
+        <option value="Kai Lianto">Kai Lianto</option>
+        <option value="Aiden Schultz">Aiden Schultz</option>
+      </select>
+    </div>
+
+    <!-- Step 2: Availability -->
+    <div class="section step step-2">
+      <div class="step-label">Step 2 — Can you make it?</div>
+      <div class="choices">
+
+        <label class="choice" id="choice-yes">
+          <input type="radio" name="availability" value="Yes, count me in" required>
+          <div class="choice-icon icon-yes">✅</div>
+          <div class="choice-text">
+            <div class="choice-title">Yes, count me in!</div>
+            <div class="choice-sub">I'll be there</div>
+          </div>
+          <div class="choice-check"></div>
+        </label>
+
+        <label class="choice" id="choice-no">
+          <input type="radio" name="availability" value="Sorry, can't make it">
+          <div class="choice-icon icon-no">❌</div>
+          <div class="choice-text">
+            <div class="choice-title">Sorry, can't make it</div>
+            <div class="choice-sub">I'm unavailable</div>
+          </div>
+          <div class="choice-check"></div>
+        </label>
+
+        <label class="choice" id="choice-maybe">
+          <input type="radio" name="availability" value="Not sure yet">
+          <div class="choice-icon icon-maybe">🤔</div>
+          <div class="choice-text">
+            <div class="choice-title">Not sure yet</div>
+            <div class="choice-sub">I'll let you know</div>
+          </div>
+          <div class="choice-check"></div>
+        </label>
+
+      </div>
+    </div>
+
+    <!-- Step 3: Need a ride? (shows when Yes selected) -->
+    <div class="section step step-3 ride-section" id="ride-section">
+      <div class="step-label">Step 3 — Getting there</div>
+      <div class="ride-toggle" id="ride-toggle">
+        <div>
+          <div class="ride-toggle-text">🚗 I need a ride</div>
+          <div class="ride-toggle-sub">Tap to let the manager know</div>
+        </div>
+        <div class="toggle-pill" id="toggle-pill"></div>
+      </div>
+      <input type="hidden" id="needs-ride" value="no">
+    </div>
+
+    <!-- Step 4: Notes -->
+    <div class="section step step-4">
+      <div class="step-label" id="notes-label">Step 4 — Anything else?</div>
+      <textarea
+        class="notes-input"
+        id="notes"
+        placeholder="Any notes for the manager… (optional)"
+        maxlength="300"
+      ></textarea>
+    </div>
+
+    <!-- Submit -->
+    <button type="submit" class="submit-btn" id="submit-btn" disabled>
+      Submit Response
+    </button>
+
+  </form>
+
+  <!-- Success screen -->
+  <div class="success-screen" id="success-screen">
+    <div class="success-icon">🏉</div>
+    <h2>Response <span style="color:var(--teal)">Sent!</span></h2>
+    <p>Thanks <span id="success-name"></span>. Your coach has been notified.</p>
+    <div class="response-summary" id="response-summary"></div>
+    <button class="another-btn" id="another-btn">Submit another response</button>
+  </div>
+
+  <!-- Saved responses panel -->
+  <div class="saved-panel" id="saved-panel" style="display:none">
+    <div class="saved-header">
+      <div class="saved-title">Responses collected</div>
+      <button class="clear-btn" id="clear-responses">Clear all</button>
+    </div>
+    <div class="saved-count" id="saved-count"></div>
+    <div class="saved-list" id="saved-list"></div>
+    <button class="copy-responses-btn" id="copy-responses">Copy all responses</button>
+  </div>
+
+</div>
+
+<script>
+  // Match details — edit these to set the match info shown to players
+  const MATCH = {
+    opponent: 'Rockdale',
+    date: 'Friday 8 May',
+    venue: 'C.A Redmond Field',
+    time: '7:20pm kick-off'
+  };
+
+  // Set match info
+  document.getElementById('match-opponent').textContent = 'vs ' + MATCH.opponent;
+  document.getElementById('match-meta').textContent = MATCH.date + ' · ' + MATCH.venue + ' · ' + MATCH.time;
+
+  // State
+  let selectedAvailability = null;
+  let needsRide = false;
+  let responses = JSON.parse(localStorage.getItem('seahorses_responses') || '[]');
+
+  // Elements
+  const form = document.getElementById('avail-form');
+  const submitBtn = document.getElementById('submit-btn');
+  const playerSelect = document.getElementById('player-select');
+  const rideSection = document.getElementById('ride-section');
+  const rideToggle = document.getElementById('ride-toggle');
+  const togglePill = document.getElementById('toggle-pill');
+  const needsRideInput = document.getElementById('needs-ride');
+  const notesLabel = document.getElementById('notes-label');
+
+  // Choice selection
+  document.querySelectorAll('.choice').forEach(choice => {
+    choice.addEventListener('click', () => {
+      const radio = choice.querySelector('input[type=radio]');
+      radio.checked = true;
+      selectedAvailability = radio.value;
+
+      document.querySelectorAll('.choice').forEach(c => {
+        c.classList.remove('selected-yes','selected-no','selected-maybe');
+      });
+
+      if(selectedAvailability === 'Yes, count me in') {
+        choice.classList.add('selected-yes');
+        rideSection.classList.add('visible');
+        notesLabel.textContent = 'Step 4 — Anything else?';
+      } else if(selectedAvailability === 'Not sure yet') {
+        choice.classList.add('selected-maybe');
+        rideSection.classList.add('visible');
+        notesLabel.textContent = 'Step 4 — Anything else?';
+      } else {
+        choice.classList.add('selected-no');
+        rideSection.classList.remove('visible');
+        needsRide = false;
+        togglePill.classList.remove('on');
+        rideToggle.classList.remove('active');
+        needsRideInput.value = 'no';
+        notesLabel.textContent = 'Step 3 — Anything else?';
+      }
+
+      checkSubmit();
+    });
+  });
+
+  // Ride toggle
+  rideToggle.addEventListener('click', () => {
+    needsRide = !needsRide;
+    needsRideInput.value = needsRide ? 'yes' : 'no';
+    togglePill.classList.toggle('on', needsRide);
+    rideToggle.classList.toggle('active', needsRide);
+  });
+
+  // Player select
+  playerSelect.addEventListener('change', checkSubmit);
+
+  function checkSubmit() {
+    submitBtn.disabled = !(playerSelect.value && selectedAvailability);
+  }
+
+  // Submit
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const player = playerSelect.value;
+    const availability = selectedAvailability;
+    const ride = needsRideInput.value === 'yes';
+    const notes = document.getElementById('notes').value.trim();
+
+    // Remove existing response for same player
+    responses = responses.filter(r => r.player !== player);
+
+    const response = { player, availability, ride, notes, time: new Date().toLocaleTimeString() };
+    responses.push(response);
+    localStorage.setItem('seahorses_responses', JSON.stringify(responses));
+
+    // Show success
+    form.style.display = 'none';
+    const successScreen = document.getElementById('success-screen');
+    successScreen.style.display = 'block';
+    document.getElementById('success-name').textContent = player.split(' ')[0];
+
+    const summaryEl = document.getElementById('response-summary');
+    const statusClass = availability === 'Yes, count me in' ? 'yes' : availability === "Sorry, can't make it" ? 'no' : 'maybe';
+    const statusEmoji = availability === 'Yes, count me in' ? '✅' : availability === "Sorry, can't make it" ? '❌' : '🤔';
+    summaryEl.innerHTML = `
+      <div class="summary-row">
+        <span class="summary-key">Player</span>
+        <span class="summary-val">${player}</span>
+      </div>
+      <div class="summary-row">
+        <span class="summary-key">Availability</span>
+        <span class="summary-val ${statusClass}">${statusEmoji} ${availability}</span>
+      </div>
+      ${ride ? `<div class="summary-row"><span class="summary-key">Ride needed</span><span class="summary-val maybe">🚗 Yes</span></div>` : ''}
+      ${notes ? `<div class="summary-row"><span class="summary-key">Notes</span><span class="summary-val" style="font-size:13px;text-align:right;max-width:200px">${notes}</span></div>` : ''}
+    `;
+
+    renderSavedPanel();
+  });
+
+  // Another response
+  document.getElementById('another-btn').addEventListener('click', () => {
+    document.getElementById('success-screen').style.display = 'none';
+    form.style.display = 'block';
+    form.reset();
+    selectedAvailability = null;
+    needsRide = false;
+    document.querySelectorAll('.choice').forEach(c => c.classList.remove('selected-yes','selected-no','selected-maybe'));
+    rideSection.classList.remove('visible');
+    togglePill.classList.remove('on');
+    rideToggle.classList.remove('active');
+    submitBtn.disabled = true;
+    notesLabel.textContent = 'Step 4 — Anything else?';
+  });
+
+  function renderSavedPanel() {
+    const panel = document.getElementById('saved-panel');
+    const list = document.getElementById('saved-list');
+    const count = document.getElementById('saved-count');
+
+    if(responses.length === 0) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+
+    const yes = responses.filter(r=>r.availability==='Yes, count me in').length;
+    const no  = responses.filter(r=>r.availability==="Sorry, can't make it").length;
+    const maybe = responses.filter(r=>r.availability==='Not sure yet').length;
+    count.textContent = `${yes} available · ${no} out · ${maybe} unsure`;
+
+    list.innerHTML = responses.map(r => {
+      const sc = r.availability==='Yes, count me in'?'yes':r.availability==="Sorry, can't make it"?'no':'maybe';
+      const sl = r.availability==='Yes, count me in'?'In':r.availability==="Sorry, can't make it"?'Out':'Maybe';
+      return `<div class="saved-row">
+        <span class="saved-name">${r.player}</span>
+        ${r.ride ? '<span style="font-size:14px">🚗</span>' : ''}
+        <span class="saved-status status-${sc}">${sl}</span>
+      </div>`;
+    }).join('');
+  }
+
+  // Copy responses
+  document.getElementById('copy-responses').addEventListener('click', () => {
+    const text = responses.map(r =>
+      `${r.player}: ${r.availability}${r.ride?' (needs ride)':''}${r.notes?' — '+r.notes:''}`
+    ).join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copy-responses');
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy all responses', 2000);
+    });
+  });
+
+  // Clear responses
+  document.getElementById('clear-responses').addEventListener('click', () => {
+    if(confirm('Clear all saved responses?')) {
+      responses = [];
+      localStorage.removeItem('seahorses_responses');
+      renderSavedPanel();
+    }
+  });
+
+  // Init
+  renderSavedPanel();
+</script>
+</body>
+</html>
