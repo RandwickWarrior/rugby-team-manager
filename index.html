@@ -3,1038 +3,218 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rugby Team Manager</title>
+<title>Coogee Seahorses JRUFC</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; background: #f2f2f7; color: #1c1c1e; min-height: 100vh; }
-  .app { max-width: 600px; margin: 0 auto; padding: 1rem 1rem 4rem; }
-  .header { text-align: center; padding: 1.5rem 0 1rem; }
-  .header h1 { font-size: 20px; font-weight: 700; }
-  .header p { font-size: 13px; color: #8e8e93; margin-top: 3px; }
-  .save-bar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border-radius: 12px; margin-bottom: 1rem; font-size: 12px; color: #8e8e93; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-  .save-dot { width: 7px; height: 7px; border-radius: 50%; background: #34c759; flex-shrink: 0; }
-  .save-dot.unsaved { background: #ff9500; }
-  .grade-picker { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
-  .grade-btn { padding: 14px 10px; border: 2px solid #e5e5ea; border-radius: 14px; background: #fff; cursor: pointer; text-align: center; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
-  .grade-btn:active { transform: scale(0.97); }
-  .grade-btn.active { border-color: #007aff; background: #f0f6ff; }
-  .grade-name { font-size: 17px; font-weight: 600; color: #1c1c1e; }
-  .grade-btn.active .grade-name { color: #007aff; }
-  .grade-detail { font-size: 11px; color: #8e8e93; margin-top: 3px; line-height: 1.4; }
-  .grade-btn.active .grade-detail { color: #007aff; opacity: 0.8; }
-  .tabs { display: flex; background: #fff; border-radius: 12px; padding: 4px; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-  .tab { flex: 1; padding: 8px 4px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; background: none; color: #8e8e93; border-radius: 9px; transition: all 0.15s; text-align: center; }
-  .tab.active { background: #007aff; color: #fff; }
-  .section-label { font-size: 12px; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; padding-left: 4px; }
-  .card { background: #fff; border-radius: 14px; padding: 14px 16px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
-  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .badge { font-size: 11px; padding: 2px 8px; border-radius: 8px; font-weight: 600; }
-  .badge-fwd { background: #e3f0ff; color: #005ecb; }
-  .badge-back { background: #f0e8ff; color: #6e3fc1; }
-  .badge-no { background: #ffe5e5; color: #c0392b; }
-  .badge-ride { background: #fff3e0; color: #e65100; }
-  .badge-num { background: #f2f2f7; color: #636366; font-size: 12px; padding: 2px 8px; border-radius: 8px; min-width: 32px; text-align: center; font-weight: 600; }
-  .player-name { font-weight: 600; font-size: 14px; flex: 1; }
-  select, input[type=text], textarea { font-family: inherit; font-size: 15px; background: #f2f2f7; border: none; border-radius: 10px; padding: 8px 12px; color: #1c1c1e; width: 100%; }
-  select:focus, input:focus, textarea:focus { outline: 2px solid #007aff; }
-  .btn { font-family: inherit; font-size: 15px; padding: 12px 18px; border-radius: 12px; border: none; background: #f2f2f7; color: #1c1c1e; cursor: pointer; font-weight: 500; transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
-  .btn:active { transform: scale(0.97); opacity: 0.85; }
-  .btn-primary { background: #007aff; color: #fff; }
-  .btn-sm { font-size: 13px; padding: 7px 14px; }
-  .btn-full { width: 100%; display: block; text-align: center; margin-bottom: 8px; }
-  .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 1rem; }
-  .stat { background: #fff; border-radius: 12px; padding: 10px 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
-  .stat-val { font-size: 24px; font-weight: 700; }
-  .stat-lbl { font-size: 11px; color: #8e8e93; margin-top: 2px; }
-  .team-slot { background: #fff; border-radius: 14px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border-left: 4px solid #007aff; }
-  .team-slot.bench { border-left-color: #af52de; }
-  .slot-num { font-size: 20px; font-weight: 700; color: #8e8e93; min-width: 28px; padding-top: 2px; }
-  .slot-pos { font-size: 14px; font-weight: 600; }
-  .slot-sub { font-size: 11px; color: #8e8e93; margin-top: 2px; }
-  .notice { font-size: 13px; color: #636366; padding: 10px 14px; background: #f2f2f7; border-radius: 10px; margin-bottom: 1rem; line-height: 1.5; }
-  .pill-pos { font-size: 11px; background: #f2f2f7; color: #636366; padding: 2px 8px; border-radius: 8px; }
-  .export-box { background: #f2f2f7; border-radius: 12px; padding: 14px; font-size: 12px; font-family: 'SF Mono', 'Fira Code', monospace; white-space: pre; overflow-x: auto; color: #3a3a3c; line-height: 2; }
-  .save-code { height: 80px; font-size: 11px; font-family: monospace; resize: none; }
-  .divider { border: none; border-top: 1px solid #f2f2f7; margin: 1rem 0; }
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1c1c1e; color: #fff; padding: 10px 22px; border-radius: 20px; font-size: 14px; opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 999; white-space: nowrap; }
-  .toast.show { opacity: 1; }
-  .avail-chip { font-size: 12px; padding: 5px 11px; border-radius: 20px; border: 1px solid #e5e5ea; background: #fff; color: #1c1c1e; display: inline-block; margin: 3px; }
-  .avail-chip.assigned { background: #f2f2f7; color: #aeaeb2; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0a1628;
+    --navy-mid: #132040;
+    --teal: #00c9a7;
+    --teal-dim: #00a085;
+    --white: #f5f7fa;
+    --muted: #8a9ab8;
+    --border: rgba(255,255,255,0.08);
+    --card: rgba(255,255,255,0.05);
+    --radius: 18px;
+  }
+
+  body {
+    background: var(--navy);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,201,167,0.15) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 110%, rgba(0,80,180,0.12) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 420px;
+    width: 100%;
+    padding: 2rem 1.25rem 3rem;
+    text-align: center;
+  }
+
+  .badge {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    margin: 0 auto 1.25rem;
+    box-shadow: 0 8px 32px rgba(0,201,167,0.25);
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.4rem, 10vw, 3.2rem);
+    letter-spacing: 0.04em;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  h1 span { color: var(--teal); }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 2.5rem;
+    letter-spacing: 0.02em;
+  }
+
+  .cards { display: flex; flex-direction: column; gap: 14px; margin-bottom: 2rem; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    text-align: left;
+  }
+
+  .card:hover, .card:active {
+    border-color: var(--teal);
+    background: rgba(0,201,167,0.07);
+    transform: translateY(-1px);
+  }
+
+  .card-icon {
+    width: 48px; height: 48px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .icon-manager { background: rgba(0,122,255,0.15); }
+  .icon-avail   { background: rgba(0,201,167,0.15); }
+
+  .card-text { flex: 1; }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 3px;
+    color: var(--white);
+  }
+
+  .card-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  .card-arrow {
+    font-size: 18px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+
+  .card.primary { border-color: rgba(0,122,255,0.3); }
+  .card.primary .card-title { color: #6eb0ff; }
+
+  .card.accent { border-color: rgba(0,201,167,0.3); }
+  .card.accent .card-title { color: var(--teal); }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1.5rem 0;
+  }
+
+  .footer {
+    font-size: 12px;
+    color: var(--muted);
+    opacity: 0.6;
+  }
+
+  .next-game {
+    background: rgba(0,201,167,0.08);
+    border: 1px solid rgba(0,201,167,0.2);
+    border-radius: 12px;
+    padding: 10px 16px;
+    margin-bottom: 2rem;
+    font-size: 13px;
+    color: var(--teal);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+  }
+
+  .next-game strong { color: var(--white); font-weight: 600; }
 </style>
 </head>
 <body>
-<div class="toast" id="toast"></div>
-<div class="app">
-  <div class="header">
-    <h1>🏉 Rugby Team Manager</h1>
-    <p>Powered by your squad · Exports to Rugby Xplorer</p>
+<div class="container">
+
+  <div class="badge">🏉</div>
+  <h1>Coogee <span>Seahorses</span></h1>
+  <p class="subtitle">Coogee Seahorses JRUFC · Under 11 · 2026</p>
+
+  <div class="next-game">
+    <span>📅</span>
+    <div>
+      <strong>Coogee 11 — Round 5 · Fri 22 May</strong><br>
+      vs Maroubra Missiles · Nagle Park Field 2 · 5:30pm
+    </div>
   </div>
-  <div id="root"></div>
+  <div class="next-game" style="margin-top:-6px;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15)">
+    <span>🏆</span>
+    <div style="color:rgba(255,255,255,0.7)">
+      <strong style="color:#fff">Recent results</strong><br>
+      Coogee 11 W 31–19 vs Burraneer Blue · Barbarians W 36–7 vs Wahroonga Gold
+    </div>
+  </div>
+
+  <div class="cards">
+
+    <a href="availability-form.html" class="card accent">
+      <div class="card-icon icon-avail">✅</div>
+      <div class="card-text">
+        <div class="card-title">Are you available?</div>
+        <div class="card-desc">Let your manager know if you can make the next game</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </a>
+
+    <a href="team-manager.html" class="card primary">
+      <div class="card-icon icon-manager">📋</div>
+      <div class="card-text">
+        <div class="card-title">Team Manager</div>
+        <div class="card-desc">Build the team, assign positions and export to Rugby Xplorer</div>
+      </div>
+      <div class="card-arrow">›</div>
+    </a>
+
+  </div>
+
+  <div class="divider"></div>
+  <p class="footer">Coogee Seahorses JRUFC · SJRU Under 11 · 2026 Season</p>
+  <p class="footer" style="margin-top:6px;opacity:0.4;font-size:11px">https://randwickwarrior.github.io/rugby-team-manager</p>
+
 </div>
-
-<script>
-const AGE_GRADES = {
-  u10: {
-    label: 'Under 10',
-    detail: '12 starters · 6 subs · No flankers or fullback',
-    starters: [
-      {num:1, label:'Loosehead Prop', xplorer:'Lose Head Prop'},{num:2, label:'Hooker'},{num:3, label:'Tight Head Prop'},
-      {num:4, label:'Left Lock'},{num:5, label:'Right Lock'},{num:6, label:'Number Eight'},
-      {num:7, label:'Scrum Half'},{num:8, label:'Fly Half'},{num:9, label:'Left Wing'},
-      {num:10,label:'Left Centre'},{num:11,label:'Right Centre'},{num:12,label:'Right Wing'},
-    ],
-    subCount: 6,
-    posMap: {
-      'Front Row - Prop':['Loosehead Prop','Tight Head Prop'],'Front Row - Hooker':['Hooker'],
-      'Back Row - 2nd Row':['Left Lock','Right Lock'],'Back Row - #8':['Number Eight'],
-      'Inside Back - Halfback':['Scrum Half'],'Inside Back - Flyhalf':['Fly Half'],
-      'Outside Back - Centre':['Left Centre','Right Centre'],'Outside Back - Wing':['Left Wing','Right Wing'],
-      'No Preference':[],'0':[],'skipped':[]
-    }
-  },
-  u11: {
-    label: 'Under 11',
-    detail: '12 starters · 6 subs · No flankers or fullback',
-    starters: [
-      {num:1, label:'Loosehead Prop', xplorer:'Lose Head Prop'},{num:2, label:'Hooker'},{num:3, label:'Tight Head Prop'},
-      {num:4, label:'Left Lock'},{num:5, label:'Right Lock'},{num:6, label:'Number Eight'},
-      {num:7, label:'Scrum Half'},{num:8, label:'Fly Half'},{num:9, label:'Left Wing'},
-      {num:10,label:'Left Centre'},{num:11,label:'Right Centre'},{num:12,label:'Right Wing'},
-    ],
-    subCount: 6,
-    posMap: {
-      'Front Row - Prop':['Loosehead Prop','Tight Head Prop'],'Front Row - Hooker':['Hooker'],
-      'Back Row - 2nd Row':['Left Lock','Right Lock'],'Back Row - #8':['Number Eight'],
-      'Inside Back - Halfback':['Scrum Half'],'Inside Back - Flyhalf':['Fly Half'],
-      'Outside Back - Centre':['Left Centre','Right Centre'],'Outside Back - Wing':['Left Wing','Right Wing'],
-      'Outside Back - Wing':['Left Wing','Right Wing'],
-      'No Preference':[],'No preference':[],'0':[],'skipped':[],'':[]
-    }
-  },
-  u12: {
-    label: 'Under 12',
-    detail: '15 starters · 8 subs · Full positions',
-    starters: [
-      {num:1, label:'Loosehead Prop', xplorer:'Lose Head Prop'},{num:2, label:'Hooker'},{num:3, label:'Tight Head Prop'},
-      {num:4, label:'Left Lock'},{num:5, label:'Right Lock'},{num:6, label:'Blindside Flanker'},
-      {num:7, label:'Openside Flanker'},{num:8, label:'Number Eight'},{num:9, label:'Scrum Half'},
-      {num:10,label:'Fly Half'},{num:11,label:'Left Wing'},{num:12,label:'Left Centre'},
-      {num:13,label:'Right Centre'},{num:14,label:'Right Wing'},{num:15,label:'Fullback'},
-    ],
-    subCount: 8,
-    posMap: {
-      'Front Row - Prop':['Loosehead Prop','Tight Head Prop'],'Front Row - Hooker':['Hooker'],
-      'Back Row - 2nd Row':['Left Lock','Right Lock','Blindside Flanker','Openside Flanker'],
-      'Back Row - #8':['Number Eight','Blindside Flanker','Openside Flanker'],
-      'Inside Back - Halfback':['Scrum Half'],'Inside Back - Flyhalf':['Fly Half'],
-      'Outside Back - Centre':['Left Centre','Right Centre'],'Outside Back - Wing':['Left Wing','Right Wing','Fullback'],
-      'No Preference':[],'0':[],'skipped':[]
-    }
-  }
-};
-
-function getPositions(grade) {
-  const g = AGE_GRADES[grade];
-  const subs = Array.from({length:g.subCount},(_,i)=>({num:g.starters.length+i+1,label:`Sub ${i+1}`}));
-  return [...g.starters,...subs];
-}
-
-// Shared squad — loaded from 2026_Season_CLAUDE.xlsx
-// friS/sunS use: Started, Sub, Unavailable, Not Selected, N.R., N/A
-const rawSquad = [
-  {name:'Rafferty Moffitt', jersey:14, group:'Back', p1:'Right Wing', p2:'Left Wing', friEligible:'Yes', sunEligible:'Yes', fri:['Out','Out','In','In'], friPos:['','','',''], sun:['N.R.','In','In','In'], sunPos:['','','Right Wing','Right Wing'], friS:['Unavailable','Unavailable','Started',''], sunS:['N.R.','Started','Started','Started'], tr:['Yes','No','No','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Theo Deichsel', jersey:23, group:'Forward', p1:'Tight Head Prop', p2:'Loosehead Prop', friEligible:'Yes', sunEligible:'Yes', fri:['In','In','In','In'], friPos:['','','',''], sun:['In','Out','In','In'], sunPos:['','','Loosehead Prop','Loosehead Prop'], friS:['Started','Started','Started','Started'], sunS:['Started','Unavailable','Started','Started'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'William English', jersey:4, group:'Forward', p1:'Left Lock', p2:'Right Lock', friEligible:'Yes', sunEligible:'Yes', fri:['Out','In','In','In'], friPos:['','','',''], sun:['In','In','In','In'], sunPos:['','','Left Lock','Left Lock'], friS:['Unavailable','Started','Started','Started'], sunS:['Started','Started','Started','Started'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Archer Price', jersey:20, group:'Back', p1:'Left Wing', p2:'Right Wing', friEligible:'Yes', sunEligible:'Sometimes', fri:['Out','In','In','In'], friPos:['','','',''], sun:['','Played','In','In'], sunPos:['','','',''], friS:['Unavailable','Started','Started','Started'], sunS:['Sub','Sub','Not Selected','Not Selected'], tr:['Yes','Yes','Yes','Yes','No','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Jackson Kendall', jersey:5, group:'Forward', p1:'Right Lock', p2:'Left Lock', friEligible:'Yes', sunEligible:'Yes', fri:['In','In','In','In'], friPos:['','','',''], sun:['In','In','In','In'], sunPos:['','','Right Lock','Right Lock'], friS:['Started','Started','Started','Started'], sunS:['Started','Started','Started','Started'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Patrick Keenen', jersey:3, group:'Forward', p1:'Loosehead Prop', p2:'Tight Head Prop', friEligible:'Yes', sunEligible:'Yes', fri:['In','In','In','In'], friPos:['','','',''], sun:['In','In','In','In'], sunPos:['','','Tight Head Prop','Tight Head Prop'], friS:['Started','Started','Started','Started'], sunS:['Started','Started','Started','Started'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Sasha Hayim', jersey:18, group:'Back', p1:'Left Wing', p2:'Right Wing', friEligible:'Yes', sunEligible:'Sometimes', fri:['In','N.R.','In','In'], friPos:['','','',''], sun:['In','In','Out','In'], sunPos:['','','Left Wing','Left Wing'], friS:['Started','N.R.','Started',''], sunS:['Started','Started','Started','Started'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Xavier Reddy', jersey:15, group:'Forward', p1:'Number Eight', p2:'Right Lock', friEligible:'Yes', sunEligible:'Yes', fri:['N.R.','In','In','In'], friPos:['','','',''], sun:['','In','In','In'], sunPos:['','','','Sub 5'], friS:['N.R.','Started','Started','Started'], sunS:['Sub','Not Selected','Not Selected','Started'], tr:['Yes','Yes','Yes','Yes','No','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Michael Dunworth', jersey:2, group:'Forward', p1:'Number Eight', p2:'Hooker', friEligible:'Yes', sunEligible:'Yes', fri:['In','In','In','In'], friPos:['','','',''], sun:['In','In','In','In'], sunPos:['','','Number Eight','Number Eight'], friS:['Started','Started','Started',''], sunS:['Started','Started','Started','Started'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Thomas Morgan', jersey:11, group:'Back', p1:'Fly Half', p2:'Left Centre', friEligible:'Yes', sunEligible:'No', fri:['In','In','Out','In'], friPos:['','','',''], sun:['Out','Out','In','In'], sunPos:['','','',''], friS:['Started','Started','Started','Started'], sunS:['Unavailable','Unavailable','N/A','N/A'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Henry Scott', jersey:17, group:'Forward', p1:'Left Lock', p2:'Right Lock', friEligible:'Yes', sunEligible:'Sometimes', fri:['N.R.','Out','In','In'], friPos:['','','',''], sun:['','Out','In','In'], sunPos:['','','','Sub 4'], friS:['N.R.','Unavailable','Started','Started'], sunS:['Started','Unavailable','Not Selected','Started'], tr:['Yes','Yes','Yes','Yes','No','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Edward Macassey', jersey:10, group:'Back', p1:'Scrum Half', p2:'Number Eight', friEligible:'Yes', sunEligible:'Yes', fri:['In','In','In','In'], friPos:['','','',''], sun:['Out','In','In','In'], sunPos:['','','Scrum Half','Scrum Half'], friS:['Started','Started','Started','Started'], sunS:['Unavailable','Started','Started','Started'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Lachlan McDonald', jersey:12, group:'Back', p1:'Left Wing', p2:'Left Centre', friEligible:'Yes', sunEligible:'No', fri:['In','In','In','In'], friPos:['','','',''], sun:['','','','In'], sunPos:['','','','Left Centre'], friS:['Started','Started','Started','Started'], sunS:['','','N/A','Started'], tr:['Yes','Yes','Yes','No','No','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Max Boss', jersey:9, group:'Back', p1:'Fly Half', p2:'Right Wing', friEligible:'Yes', sunEligible:'No', fri:['Out','Out','In','In'], friPos:['','','',''], sun:['Out','Out','In',''], sunPos:['','','',''], friS:['Unavailable','Unavailable','Started','Started'], sunS:['Unavailable','Unavailable','N/A','N/A'], tr:['Yes','Yes','Yes','No','No','Yes','No',''], trRainedOut:[3]},
-  {name:'Nathan Evans', jersey:13, group:'Back', p1:'Scrum Half', p2:'Left Wing', friEligible:'Yes', sunEligible:'Yes', fri:['In','In','In','In'], friPos:['','','',''], sun:['Out','In','In','In'], sunPos:['','','Right Centre','Right Centre'], friS:['Started','Started','Started','Started'], sunS:['Unavailable','Started','Started','Started'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Beau Hack', jersey:6, group:'Back', p1:'Left Centre', p2:'Right Centre', friEligible:'Yes', sunEligible:'Sometimes', fri:['In','In','In','In'], friPos:['','','',''], sun:['Out','In','In','In'], sunPos:['','','',''], friS:['Started','Started','Started','Started'], sunS:['Started','Started','Not Selected','Not Selected'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Teddy Russell', jersey:8, group:'Forward', p1:'Hooker', p2:'Number Eight', friEligible:'Yes', sunEligible:'Sometimes', fri:['Out','In','In','In'], friPos:['','','',''], sun:['In','x','x','In'], sunPos:['','','',''], friS:['Unavailable','Started','Started','Started'], sunS:['Started','Unavailable','N.R.','Not Selected'], tr:['No','Yes','Yes','No','No','Yes','No',''], trRainedOut:[3]},
-  {name:'Kycen Puroku', jersey:7, group:'Back', p1:'Left Centre', p2:'Fly Half', friEligible:'Yes', sunEligible:'Sometimes', fri:['In','In','In','In'], friPos:['','','',''], sun:['Out','Out','','In'], sunPos:['','','','Sub 2'], friS:['Started','Started','Started','Started'], sunS:['Started','Unavailable','Not Selected','Started'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Freddie Kirrane', jersey:19, group:'Back', p1:'Right Wing', p2:'Left Wing', friEligible:'Yes', sunEligible:'No', fri:['In','In','In','In'], friPos:['','','',''], sun:['Out','','',''], sunPos:['','','',''], friS:['Started','Started','Started','Started'], sunS:['Unavailable','','N/A','N/A'], tr:['Yes','Yes','No','Yes','Yes','No','Yes',''], trRainedOut:[3]},
-  {name:'Watene Falemanu', jersey:21, group:'Forward', p1:'Loosehead Prop', p2:'Tight Head Prop', friEligible:'Yes', sunEligible:'Yes', fri:['In','In','In','In'], friPos:['','','',''], sun:['In','In','','In'], sunPos:['','','','Sub 1'], friS:['Started','Started','Started','Started'], sunS:['Started','Started','Unavailable','Started'], tr:['Yes','No','No','Yes','No','Yes','No',''], trRainedOut:[3]},
-  {name:'Elliot Dean', jersey:16, group:'Forward', p1:'Number Eight', p2:'Hooker', friEligible:'Sometimes', sunEligible:'Yes', fri:['In','N.R.','In','In'], friPos:['','','',''], sun:['In','x','In','In'], sunPos:['','','Hooker','Hooker'], friS:['Started','N.R.','Started','Started'], sunS:['Started','Unavailable','Started','Started'], tr:['Yes','Yes','No','Yes','Yes','No','Yes',''], trRainedOut:[3]},
-  {name:'Kai Lianto', jersey:1, group:'Forward', p1:'Hooker', p2:'Loosehead Prop', friEligible:'Yes', sunEligible:'Yes', fri:['In','N.R.','In','In'], friPos:['','','',''], sun:['','In','','In'], sunPos:['','','','Sub 3'], friS:['Started','N.R.','Started','Started'], sunS:['','Started','Unavailable','Started'], tr:['Yes','No','Yes','No','Yes','No','No',''], trRainedOut:[3]},
-  {name:'Aiden Schultz', jersey:null, group:'Back', p1:'Left Wing', p2:'Right Wing', friEligible:'Sometimes', sunEligible:'Yes', fri:['Out','In','In','In'], friPos:['','','',''], sun:['Out','In','In','In'], sunPos:['','','Fly Half','Fly Half'], friS:['Unavailable','Started','Started','Started'], sunS:['Unavailable','Started','Started','Started'], tr:['No','Yes','No','Yes','No','Yes','No',''], trRainedOut:[3]},
-  {name:'Xavier Saunders', jersey:null, group:'Back', p1:'Left Wing', p2:'Right Wing', friEligible:'No', sunEligible:'Sometimes', fri:['','','',''], friPos:['','','',''], sun:['In','x','',''], sunPos:['','','Left Centre',''], friS:['','','',''], sunS:['Started','Started','Started','Not Selected'], tr:['No','No','No','No','No','No','No',''], trRainedOut:[3], friIneligible:true, guestNote:'Unregistered — playing under this name pending registration. Not available Fridays.'},
-  {name:'Oliver Worley', jersey:17, group:'Back', p1:'No Preference', p2:'', friEligible:'No', sunEligible:'Sometimes', fri:['','','',''], friPos:['','','',''], sun:['Sub','Sub','',''], sunPos:['','','',''], friS:['','','',''], sunS:['Sub','Sub','Not Selected','Not Selected'], tr:['No','No','No','No','No','No','No',''], trRainedOut:[3], friIneligible:true, guest:true, guestNote:'U10 fill-in'},
-  {name:'Cade Forshaw', jersey:null, group:'Back', p1:'No Preference', p2:'', friEligible:'No', sunEligible:'Yes', fri:['','','',''], friPos:['','','',''], sun:['','','','In'], sunPos:['','','','Sub 6'], friS:['','','',''], sunS:['','','Not Selected','Started'], tr:['No','No','No','No','No','No','No',''], trRainedOut:[3], friIneligible:true},
-];
-
-// Front row positions — ONLY players who specifically play these can fill them
-const FRONT_ROW = ['Loosehead Prop','Tight Head Prop','Hooker'];
-// Rugby Xplorer uses "Lose Head Prop" in the entry form (misspelling kept for export only)
-// Internally and in UI we use "Loosehead Prop"
-
-// Interchangeable position groups (any position in a group can cover any other)
-function getInterchangeable(grade) {
-  const base = [
-    ['Left Wing','Right Wing'],
-    ['Left Lock','Right Lock'],
-    ['Left Centre','Right Centre'],
-  ];
-  // U10 and U11: Number Eight is also interchangeable with both locks
-  if(grade === 'u10' || grade === 'u11') {
-    base.push(['Left Lock','Right Lock','Number Eight']);
-  }
-  return base;
-}
-
-// Returns all positions a player can play given their spreadsheet categories + interchangeable rules
-function resolvePositions(categories, grade) {
-  const pm = AGE_GRADES[grade].posMap;
-  // Collect all mapped Xplorer positions from this player's categories
-  let resolved = [];
-  for(const cat of categories) {
-    for(const pos of (pm[cat]||[])) {
-      if(!resolved.includes(pos)) resolved.push(pos);
-    }
-  }
-
-  // Apply interchangeable rules — if player can play any position in a group, add the whole group
-  const interchangeable = getInterchangeable(grade);
-  let added = true;
-  while(added) {
-    added = false;
-    for(const group of interchangeable) {
-      if(group.some(p=>resolved.includes(p))) {
-        for(const p of group) {
-          if(!resolved.includes(p)) { resolved.push(p); added=true; }
-        }
-      }
-    }
-  }
-
-  // Front row restriction: remove front row positions unless the player explicitly plays them
-  const playerFrontRow = categories.some(c => c==='Front Row - Prop' || c==='Front Row - Hooker');
-  if(!playerFrontRow) {
-    resolved = resolved.filter(p => !FRONT_ROW.includes(p));
-  }
-
-  return resolved;
-}
-
-// Coogee 11 (seahorses) players are eligible for Barbarians but not vice versa.
-// We tag each player with their "home" team from the squad data.
-// All players in rawSquad are part of Coogee 11 (seahorses).
-// Barbarians-only players would have seahorses:false — none currently.
-function isEligible(player, team) {
-  if(team === 'seahorses') return !player.friIneligible && player.friEligible !== 'No';
-  return player.sunEligible !== 'No'; // No = explicitly cannot play Sundays
-}
-
-function buildSquad(grade) {
-  return rawSquad.map(p=>{
-    const cats = [p.p1, p.p2, p.p3].filter(x=>x&&x!=='No Preference'&&x!=='0'&&x!=='skipped');
-    const prefCats = [p.p1].filter(x=>x&&x!=='No Preference'&&x!=='0'&&x!=='skipped');
-    const allPositions = resolvePositions(cats, grade);
-    const prefPositions = resolvePositions(prefCats, grade);
-    const altPositions = allPositions.filter(pos=>!prefPositions.includes(pos));
-    return {
-      ...p,
-      prefXplorer: prefPositions,
-      altXplorer:  altPositions,
-      allXplorer:  allPositions,
-      alts: [p.p2].filter(x=>x&&x!=='No Preference'&&x!=='No preference'&&x!=='0'&&x!=='skipped'&&x!=='')
-    };
-  });
-}
-
-function squadForTeam(grade, team) {
-  return buildSquad(grade).filter(p=>isEligible(p, team));
-}
-
-const POLL_OPTIONS = ['Yes, count me in',"Sorry, can't make it",'Help! I need a ride, please','Other (Contact Manager)'];
-const SAVE_KEY = 'rugby_mgr_v3';
-
-const TEAMS = {
-  seahorses:  { label:'Coogee 11',           detail:'Friday nights',   histKey:'fri' },
-  barbarians: { label:'Coogee Barbarians 11', detail:'Sunday mornings', histKey:'sun' }
-};
-
-// Pre-populated fixtures keyed by team then round number
-const FIXTURES = {
-  seahorses: [
-    { round:1,  opponent:'Burraneer Gold',        date:'Fri 24 Apr',  venue:'John Dwyer Park',       time:'7:10pm',  result:'L 41–12' },
-    { round:2,  opponent:'Clovelly Eagles Blue',  date:'Fri 1 May',   venue:'Nagle Park Field 2',    time:'5:30pm',  result:'W 36–12' },
-    { round:3,  opponent:'Rockdale',              date:'Fri 8 May',   venue:'C.A Redmond Oval',      time:'7:20pm',  result:'' },
-    { round:4,  opponent:'Burraneer Blue',        date:'Fri 15 May',  venue:'Nagle Park Field 1',    time:'7:20pm',  result:'W 31–19' },
-    { round:5,  opponent:'Maroubra Missiles',     date:'Fri 22 May',  venue:'Nagle Park Field 2',    time:'5:30pm',  result:'' },
-    { round:6,  opponent:'Oatley',                date:'Fri 29 May',  venue:'Nagle Park Field 2',    time:'5:30pm',  result:'' },
-    { round:7,  opponent:'Clovelly Eagles White', date:'Fri 12 Jun',  venue:'Nagle Park Field 1',    time:'8:00pm',  result:'' },
-    { round:8,  opponent:'TBC',                   date:'Fri 19 Jun',  venue:'Nagle Park Field 1',    time:'8:00pm',  result:'' },
-  ],
-  barbarians: [
-    { round:1,  opponent:'Hunters Hill Black',    date:'Sun 26 Apr',  venue:'Boronia Park Field 1',  time:'9:30am',  result:'W 26–5' },
-    { round:2,  opponent:'Norths Pirates',        date:'Sun 3 May',   venue:'Nagle Park Field 1',    time:'11:00am', result:'L 14–29' },
-    { round:3,  opponent:'Wakehurst',             date:'Sun 10 May',  venue:'Wakehurst Rugby Park',  time:'9:50am',  result:'D 26–26' },
-    { round:4,  opponent:'Wahroonga Gold',        date:'Sun 17 May',  venue:'Nagle Park Field 1',    time:'9:10am',  result:'W 36–7' },
-  ]
-};
-
-function emptyData(team) {
-  // Default to next upcoming round
-  const defaultRound = team === 'seahorses' ? 5 : 4;
-  const fixture = (FIXTURES[team]||[]).find(f=>f.round===defaultRound);
-  return {
-    grade:'u11',
-    round: defaultRound,
-    match: fixture ? {opponent:fixture.opponent, date:fixture.date, venue:fixture.venue, time:fixture.time} : {opponent:'',date:'',venue:'',time:''},
-    pollResults:{},
-    teamSlots:{}
-  };
-}
-
-// Pre-populate Round 3 availability from spreadsheet
-const R3_POLL = {"Rafferty Moffitt": "Yes, count me in", "William English": "Yes, count me in", "Jackson Kendall": "Yes, count me in", "Patrick Keenen": "Yes, count me in", "Xavier Reddy": "Yes, count me in", "Michael Dunworth": "Yes, count me in", "Thomas Morgan": "Yes, count me in", "Henry Scott": "Yes, count me in", "Edward Macassey": "Yes, count me in", "Lachlan McDonald": "Yes, count me in", "Max Boss": "Yes, count me in", "Nathan Evans": "Yes, count me in", "Beau Hack": "Yes, count me in", "Teddy Russell": "Yes, count me in", "Kycen Puroku": "Yes, count me in", "Freddie Kirrane": "Yes, count me in", "Aiden Schultz": "Yes, count me in", "Kai Lianto": "Yes, count me in", "Theo Deichsel": "Yes, count me in", "Archer Price": "Yes, count me in", "Sasha Hayim": "Yes, count me in", "Watene Falemanu": "Yes, count me in", "Elliot Dean": "Yes, count me in", "Xavier Saunders": "Sorry, can't make it"};
-
-let state = {
-  tab: 'poll',
-  section: 'availability',
-  teamView: 'positions',
-  statsView: 'table',
-  team: 'seahorses',
-  teams: { seahorses: emptyData('seahorses'), barbarians: emptyData('barbarians') }
-};
-
-const R3_TEAM = {
-  "1":  "Patrick Keenen",    // Loosehead Prop — pref pos, 7/7 training, started R2+R3
-  "2":  "Kai Lianto",        // Hooker — specialist, started R1+R3
-  "3":  "Theo Deichsel",     // Tight Head Prop — pref pos per new spreadsheet, 7/7 training
-  "4":  "Jackson Kendall",   // Right Lock — pref pos, 7/7 training, started all 3 games
-  "5":  "William English",   // Left Lock — 7/7 training, started R2+R3
-  "6":  "Michael Dunworth",  // Number Eight — pref pos, 7/7 training, started all 3 games
-  "7":  "Edward Macassey",   // Scrum Half — pref pos, 7/7 training, started all 3 games
-  "8":  "Thomas Morgan",     // Fly Half — pref pos, 7/7 training, started all 3 games
-  "9":  "Lachlan McDonald",  // Left Wing — pref pos, started all 3 games
-  "10": "Beau Hack",         // Left Centre — pref pos, 7/7 training, started all 3 games
-  "11": "Kycen Puroku",      // Right Centre — pref pos, 7/7 training, started all 3 games
-  "12": "Freddie Kirrane",   // Right Wing — pref pos, started all 3 games
-  "13": "Xavier Reddy",      // Sub 1 — 6/7 training, started R2+R3 at #8, forward cover
-  "14": "Nathan Evans",      // Sub 2 — 7/7 training, sub all 3 games, back/SH cover
-  "15": "Watene Falemanu",   // Sub 3 — front row cover, started R1+R3 at LHP
-  "16": "Sasha Hayim",       // Sub 4 — 7/7 training, played R1+R3, wing cover
-  "17": "Elliot Dean",       // Sub 5 — 5/7 training, lock/hooker cover
-  "18": "Rafferty Moffitt",  // Sub 6 — 6/7 training, available R3 after 2 games out
-};
-
-// Inject R3 poll results and team if seahorses hasn't been saved yet (fresh load)
-if(Object.keys(state.teams.seahorses.pollResults).length === 0 && state.teams.seahorses.round === 3) {
-  state.teams.seahorses.pollResults = {...R3_POLL};
-  state.teams.seahorses.teamSlots = {...R3_TEAM};
-}
-let savedState = null;
-
-function td()        { return state.teams[state.team]; }
-function squad()     { return squadForTeam(td().grade, state.team); }
-function positions() { return getPositions(td().grade); }
-function histKey()   { return TEAMS[state.team].histKey; }
-
-function toCode() {
-  return btoa(unescape(encodeURIComponent(JSON.stringify({v:3,team:state.team,teams:state.teams}))));
-}
-function fromCode(code) {
-  try {
-    const d=JSON.parse(decodeURIComponent(escape(atob(code.trim()))));
-    if(d.v>=2){ if(d.team) state.team=d.team; if(d.teams) state.teams=d.teams; }
-    savedState=toCode(); return true;
-  } catch(e){return false;}
-}
-function storageSave(){try{localStorage.setItem(SAVE_KEY,toCode());savedState=toCode();return true;}catch(e){return false;}}
-function storageLoad(){try{const v=localStorage.getItem(SAVE_KEY);if(v){fromCode(v);return true;}}catch(e){}return false;}
-function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
-function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-
-function histDot(val, pos) {
-  if(!val) return '<span style="color:#d1d1d6;font-size:11px">·</span>';
-  const map = {
-    'In':    '<span style="color:#34c759;font-size:11px;font-weight:700" title="Started">✓</span>',
-    'Sub':   '<span style="color:#007aff;font-size:11px;font-weight:700" title="Came on as sub">↑</span>',
-    'Out':   '<span style="color:#ff9500;font-size:11px;font-weight:700" title="Unavailable">U</span>',
-    'NS':    '<span style="color:#aeaeb2;font-size:11px;font-weight:700" title="Not selected">NS</span>',
-    'N.R.':  '<span style="color:#8e8e93;font-size:11px" title="No response">?</span>',
-    'x':     '<span style="color:#8e8e93;font-size:11px" title="No response">?</span>',
-    'Played':'<span style="color:#34c759;font-size:11px;font-weight:700" title="Played">✓</span>',
-  };
-  const dot = map[val] || `<span style="color:#aeaeb2;font-size:11px">${val}</span>`;
-  if(pos && (val==='In'||val==='Sub'||val==='Played')) {
-    return `<span title="${pos}">${dot}</span>`;
-  }
-  return dot;
-}
-
-function render() {
-  const clean=savedState===toCode();
-  document.getElementById('root').innerHTML=`
-    <div class="save-bar">
-      <div class="save-dot ${clean?'':'unsaved'}"></div>
-      <span style="flex:1;font-weight:500">${clean?'Saved':'Unsaved changes'}</span>
-      <button class="btn btn-sm" id="save-now" style="margin-right:4px">Save</button>
-      <button class="btn btn-sm" id="show-code">Export code</button>
-    </div>
-
-    <div class="section-label">Age grade</div>
-    <div class="grade-picker">
-      ${Object.entries(AGE_GRADES).map(([key,g])=>`
-        <button class="grade-btn ${td().grade===key?'active':''}" data-grade="${key}">
-          <div class="grade-name">${g.label}</div>
-          <div class="grade-detail">${g.detail}</div>
-        </button>`).join('')}
-    </div>
-
-    <div class="section-label">Team</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem">
-      ${Object.entries(TEAMS).map(([key,t])=>`
-        <button class="grade-btn ${state.team===key?'active':''}" data-team="${key}">
-          <div class="grade-name" style="font-size:14px;line-height:1.3">${t.label}</div>
-          <div class="grade-detail">${t.detail}</div>
-        </button>`).join('')}
-    </div>
-
-    <div style="display:flex;background:#f2f2f7;border-radius:10px;padding:3px;gap:2px;margin-bottom:10px">
-      <button class="section-btn" data-section="availability"
-        style="flex:1;border:none;border-radius:8px;padding:8px 4px;font-size:13px;font-weight:${state.section==='availability'?'600':'400'};cursor:pointer;font-family:inherit;background:${state.section==='availability'?'#fff':'transparent'};color:${state.section==='availability'?'#007aff':'#8e8e93'};box-shadow:${state.section==='availability'?'0 1px 4px rgba(0,0,0,0.12)':'none'}">
-        Availability
-      </button>
-      <button class="section-btn" data-section="squad"
-        style="flex:1;border:none;border-radius:8px;padding:8px 4px;font-size:13px;font-weight:${state.section==='squad'?'600':'400'};cursor:pointer;font-family:inherit;background:${state.section==='squad'?'#fff':'transparent'};color:${state.section==='squad'?'#007aff':'#8e8e93'};box-shadow:${state.section==='squad'?'0 1px 4px rgba(0,0,0,0.12)':'none'}">
-        Squad
-      </button>
-    </div>
-
-    <div class="tabs">
-      ${(state.section==='availability'
-        ? ['poll','team','export']
-        : ['squad','stats']
-      ).map(t=>`
-        <button class="tab ${state.tab===t?'active':''}" data-tab="${t}">
-          ${{poll:'Poll',team:'Competition',export:'Sheet',squad:'Squad',stats:'Stats'}[t]}
-        </button>`).join('')}
-    </div>
-    ${state.tab==='poll'?buildPoll():state.tab==='squad'?buildSquad2():state.tab==='team'?buildTeam():state.tab==='stats'?buildStats():buildExport()}
-  `;
-  attachEvents();
-}
-
-function buildPoll(){
-  const sq=squad(); const t=td(); const hk=histKey();
-  const avail  =sq.filter(p=>t.pollResults[p.name]==='Yes, count me in').length;
-  const unavail=sq.filter(p=>t.pollResults[p.name]==="Sorry, can't make it").length;
-  const ride   =sq.filter(p=>t.pollResults[p.name]==='Help! I need a ride, please').length;
-  const unset  =sq.filter(p=>!t.pollResults[p.name]).length;
-  return `
-    <div class="section-label">Match details — ${TEAMS[state.team].label}</div>
-    <div class="card" style="margin-bottom:1rem">
-      <div style="margin-bottom:12px">
-        <div style="font-size:12px;color:#8e8e93;margin-bottom:4px">Round</div>
-        <select id="m-round" style="width:100%;font-size:15px">
-          <option value="">— select round —</option>
-          ${(FIXTURES[state.team]||[]).map(f=>`<option value="${f.round}" ${t.round===f.round?'selected':''}>Round ${f.round} — ${f.opponent} (${f.date})${f.result?' · '+f.result:''}</option>`).join('')}
-          <option value="custom" ${t.round==='custom'?'selected':''}>Other / enter manually</option>
-        </select>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <div><div style="font-size:12px;color:#8e8e93;margin-bottom:4px">Opponent</div><input type="text" id="m-opponent" value="${esc(t.match.opponent)}" placeholder="e.g. Rockdale"></div>
-        <div><div style="font-size:12px;color:#8e8e93;margin-bottom:4px">Date</div><input type="text" id="m-date" value="${esc(t.match.date)}" placeholder="e.g. Fri 8 May"></div>
-        <div><div style="font-size:12px;color:#8e8e93;margin-bottom:4px">Venue</div><input type="text" id="m-venue" value="${esc(t.match.venue)}" placeholder="e.g. C.A Redmond Field"></div>
-        <div><div style="font-size:12px;color:#8e8e93;margin-bottom:4px">Kick-off</div><input type="text" id="m-time" value="${esc(t.match.time)}" placeholder="e.g. 7:20pm"></div>
-      </div>
-    </div>
-    <div class="section-label">Poll responses
-
-    </div>
-    ${sq.map(p=>{
-      const hist = hk==='fri' ? p.fri : p.sun;
-      const histPos = hk==='fri' ? p.friPos : p.sunPos;
-      return `
-      <div class="card" style="padding:10px 14px;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-          <span class="badge-num badge">${p.jersey??'—'}</span>
-          <span class="player-name">${p.name}</span>
-          <span class="badge ${p.group==='Forward'?'badge-fwd':'badge-back'}">${p.group}</span>
-        </div>
-        <select data-poll="${p.name}">
-          <option value="">— not set —</option>
-          ${POLL_OPTIONS.map(o=>`<option value="${o}" ${t.pollResults[p.name]===o?'selected':''}>${o}</option>`).join('')}
-        </select>
-      </div>`}).join('')}
-    <div class="stat-grid" style="margin-top:1rem">
-      <div class="stat"><div class="stat-val" style="color:#34c759">${avail}</div><div class="stat-lbl">Available</div></div>
-      <div class="stat"><div class="stat-val" style="color:#ff3b30">${unavail}</div><div class="stat-lbl">Out</div></div>
-      <div class="stat"><div class="stat-val" style="color:#ff9500">${ride}</div><div class="stat-lbl">Needs ride</div></div>
-      <div class="stat"><div class="stat-val" style="color:#aeaeb2">${unset}</div><div class="stat-lbl">No reply</div></div>
-    </div>
-    <button class="btn btn-primary btn-full" id="go-team" style="margin-top:4px">Build team ↗</button>
-  `;
-}
-
-function buildSquad2(){
-  const sq=squad(); const g=AGE_GRADES[td().grade];
-  return `
-    <div class="notice">${TEAMS[state.team].label} · ${g.label}: ${g.starters.length} starters + ${g.subCount} subs. Both teams share this squad.<br><span style="color:#ff9500;font-size:12px">⚠️ Notes: Theo Deichsel now #23, Kai Lianto #1 (jerseys swapped). Cade Forshaw and Oliver Worley are Sunday/Barbarians only. Xavier Saunders unregistered, Fridays unavailable.</span></div>
-    <div style="display:flex;gap:10px;font-size:12px;color:#8e8e93;padding:0 4px;margin-bottom:8px;flex-wrap:wrap">
-      <span>${histDot('In')} Started</span>
-      <span>${histDot('Sub')} Sub</span>
-      <span><span style="color:#ff9500;font-size:11px;font-weight:700">U</span> Unavailable</span>
-      <span><span style="color:#aeaeb2;font-size:11px;font-weight:700">NS</span> Not selected</span>
-      <span>${histDot('N.R.')} No response</span>
-      <span style="font-size:11px;color:#aeaeb2">Tap/hover dot to see position</span>
-    </div>
-    <div class="section-label">Squad — ${sq.length} players · History: Fri G1·G2·G3 &nbsp;|&nbsp; Sun G1·G2·G3</div>
-    ${sq.map(p=>`
-      <div class="card" style="padding:10px 14px">
-        <div class="row">
-          <span class="badge-num badge">#${p.jersey??'—'}</span>
-          <span class="player-name">${p.name}</span>
-          <span class="badge ${p.group==='Forward'?'badge-fwd':'badge-back'}">${p.group}</span>
-          <span style="display:flex;gap:3px;align-items:center;font-size:11px;color:#8e8e93">
-            Fri: ${p.fri.map((v,i)=>histDot(v,p.friPos?.[i])).join('')} &nbsp;Sun: ${p.sun.map((v,i)=>histDot(v,p.sunPos?.[i])).join('')}
-          </span>
-        </div>
-        <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
-          <span class="pill-pos">${p.p1}</span>
-          ${p.alts.map(a=>`<span class="pill-pos" style="opacity:0.6">${a}</span>`).join('')}
-        </div>
-      </div>`).join('')}
-  `;
-}
-
-function buildTeam(){
-  const sq=squad(); const pos=positions(); const t=td(); const hk=histKey();
-  const starters=pos.filter(p=>!p.label.startsWith('Sub'));
-  const bench=pos.filter(p=>p.label.startsWith('Sub'));
-  const available=sq.filter(p=>t.pollResults[p.name]==='Yes, count me in'||t.pollResults[p.name]==='Help! I need a ride, please');
-  const assignedNames=Object.values(t.teamSlots);
-
-  function slotHtml(p){
-    const assigned=t.teamSlots[p.num]; const isSub=p.label.startsWith('Sub');
-    return `
-      <div class="team-slot ${isSub?'bench':''}">
-        <span class="slot-num">${p.num}</span>
-        <div style="flex:1;min-width:0">
-          <div class="slot-pos">${p.label}</div>
-          ${isSub?'<div class="slot-sub">Any position</div>':''}
-          <select data-slot="${p.num}" style="margin-top:6px">
-            <option value="">— unassigned —</option>
-            ${available.map(pl=>{
-              const taken=assignedNames.includes(pl.name)&&assigned!==pl.name;
-              const isPref=!isSub&&pl.prefXplorer.includes(p.label);
-              const isAlt=!isSub&&pl.altXplorer.includes(p.label);
-              return `<option value="${pl.name}" ${assigned===pl.name?'selected':''} ${taken?'disabled':''}>${pl.jersey??'—'} ${pl.name}${isPref?' ★':isAlt?' ◆':''}</option>`;
-            }).join('')}
-          </select>
-        </div>
-      </div>`;
-  }
-
-  return `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="display:flex;background:#f2f2f7;border-radius:10px;padding:3px;gap:2px">
-        <button class="btn btn-sm view-toggle ${state.teamView==='positions'?'active':''}" data-view="positions" style="border:none;border-radius:8px;padding:6px 14px;background:${state.teamView==='positions'?'#fff':'transparent'};color:${state.teamView==='positions'?'#007aff':'#8e8e93'};font-weight:${state.teamView==='positions'?'600':'400'};box-shadow:${state.teamView==='positions'?'0 1px 4px rgba(0,0,0,0.12)':'none'}">Positions</button>
-        <button class="btn btn-sm view-toggle ${state.teamView==='field'?'active':''}" data-view="field" style="border:none;border-radius:8px;padding:6px 14px;background:${state.teamView==='field'?'#fff':'transparent'};color:${state.teamView==='field'?'#007aff':'#8e8e93'};font-weight:${state.teamView==='field'?'600':'400'};box-shadow:${state.teamView==='field'?'0 1px 4px rgba(0,0,0,0.12)':'none'}">Field view</button>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-sm btn-primary" id="auto-fill">Auto-fill</button>
-        <button class="btn btn-sm" id="clear-team">Clear</button>
-      </div>
-    </div>
-    <div style="margin-bottom:12px">
-      <div class="section-label">Available (${available.length}) — ${TEAMS[state.team].label}</div>
-      ${available.length===0?'<div class="notice">No players available yet — enter poll responses first.</div>':
-        `<div style="display:flex;flex-wrap:wrap;">${available.map(p=>{
-          const a=assignedNames.includes(p.name);
-          return `<span class="avail-chip ${a?'assigned':''}">${p.jersey??'—'} ${p.name}${a?' ✓':''}</span>`;
-        }).join('')}</div>`}
-    </div>
-
-    ${state.teamView==='field' ? buildField() : `
-    <div class="notice">★ preferred &nbsp;◆ alternate &nbsp;Greyed = already assigned</div>
-    <div class="section-label">Starters</div>
-    ${starters.map(slotHtml).join('')}
-    <div class="section-label" style="margin-top:1.25rem">Bench (${bench.length} subs)</div>
-    ${bench.map(slotHtml).join('')}
-    <p style="font-size:12px;color:#aeaeb2;margin-top:8px">★ preferred &nbsp;◆ alternate &nbsp;Grey = already assigned</p>
-    `}
-  `;
-}
-
-function buildField() {
-  const sq = squad();
-  const t = td();
-  const grade = td().grade;
-  const starters = AGE_GRADES[grade].starters;
-  const subCount = AGE_GRADES[grade].subCount;
-
-  // Position layout: x=% left-right, y=% top-bottom
-  // Props at TOP, fullback/wings at BOTTOM
-  // U10/U11 (12 players): no flankers/fullback
-  // U12 (15 players): full layout
-  const posLayout_u11 = {
-    'Loosehead Prop':   { x:22, y:14 },
-    'Hooker':           { x:50, y:14 },
-    'Tight Head Prop':  { x:78, y:14 },
-    'Left Lock':        { x:36, y:26 },
-    'Right Lock':       { x:64, y:26 },
-    'Number Eight':     { x:50, y:36 },
-    'Scrum Half':       { x:50, y:51 },
-    'Fly Half':         { x:67, y:61 },
-    'Left Centre':      { x:27, y:74 },
-    'Right Centre':     { x:73, y:74 },
-    'Left Wing':        { x:8,  y:86 },
-    'Right Wing':       { x:92, y:86 },
-  };
-
-  const posLayout_u12 = {
-    'Loosehead Prop':   { x:22, y:12 },
-    'Hooker':           { x:50, y:12 },
-    'Tight Head Prop':  { x:78, y:12 },
-    'Left Lock':        { x:36, y:23 },
-    'Right Lock':       { x:64, y:23 },
-    'Blindside Flanker':{ x:26, y:32 },
-    'Openside Flanker': { x:74, y:32 },
-    'Number Eight':     { x:50, y:32 },
-    'Scrum Half':       { x:50, y:45 },
-    'Fly Half':         { x:67, y:55 },
-    'Left Centre':      { x:25, y:66 },
-    'Right Centre':     { x:75, y:66 },
-    'Left Wing':        { x:8,  y:77 },
-    'Right Wing':       { x:92, y:77 },
-    'Fullback':         { x:50, y:87 },
-  };
-
-  const posLayout = (grade === 'u12') ? posLayout_u12 : posLayout_u11;
-
-  const fwdPositions = ['Loosehead Prop','Hooker','Tight Head Prop','Left Lock','Right Lock',
-    'Blindside Flanker','Openside Flanker','Number Eight'];
-  const isForward = pos => fwdPositions.includes(pos);
-
-  function abbrevPos(p) {
-    return p.replace('Loosehead Prop','LH Prop')
-            .replace('Tight Head Prop','TH Prop')
-            .replace('Blindside Flanker','BS Flanker')
-            .replace('Openside Flanker','OS Flanker')
-            .replace('Number Eight','No. 8')
-            .replace('Scrum Half','Scrum Half')
-            .replace('Fly Half','Fly Half')
-            .replace('Left Centre','L Centre')
-            .replace('Right Centre','R Centre')
-            .replace('Left Wing','L Wing')
-            .replace('Right Wing','R Wing');
-  }
-
-  function playerToken(posLabel, slotNum) {
-    const name = t.teamSlots[slotNum] || '';
-    const player = sq.find(p => p.name === name);
-    const jersey = player ? (player.jersey ?? '?') : '';
-    const coords = posLayout[posLabel] || { x:50, y:50 };
-    const fwd = isForward(posLabel);
-    const bg = fwd ? '#1a1a1a' : '#ffffff';
-    const fg = fwd ? '#ffffff' : '#1a1a1a';
-    const border = fwd ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)';
-    const nameParts = name ? name.split(' ') : [];
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-
-    return `<div class="fp-token" style="left:${coords.x}%;top:${coords.y}%" title="${posLabel}${name?' — '+name:''}">
-      <div class="fp-circle" style="background:${bg};border-color:${border};${!name?'opacity:0.35;border-style:dashed':''}">
-        <span class="fp-jnum" style="color:${fg}">${name ? jersey : '?'}</span>
-      </div>
-      <div class="fp-pname" style="color:${fwd?'#fff':'#fff'}">${firstName ? `<span style="opacity:0.85">${firstName}</span><br><strong>${lastName}</strong>` : '<span style="opacity:0.4">—</span>'}</div>
-      <div class="fp-ppos" style="color:rgba(255,255,255,0.6)">${abbrevPos(posLabel)}</div>
-    </div>`;
-  }
-
-  // Subs row
-  const subs = Array.from({length: subCount}, (_,i) => ({
-    num: starters.length + i + 1, label: `Sub ${i+1}`
-  }));
-
-  function subToken(s) {
-    const name = t.teamSlots[s.num] || '';
-    const player = sq.find(p => p.name === name);
-    const jersey = player ? (player.jersey ?? '?') : '';
-    const nameParts = name ? name.split(' ') : [];
-    const firstName = nameParts[0] || '';
-    const lastName = nameParts.slice(1).join(' ') || '';
-    // Determine if forward or back based on their preferred positions
-    const fwd = player && player.prefXplorer.some(p => fwdPositions.includes(p));
-    const bg = fwd ? '#1a1a1a' : '#ffffff';
-    const fg = fwd ? '#ffffff' : '#1a1a1a';
-    const border = fwd ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)';
-    return `<div class="fp-sub-token" title="${s.label}${name?' — '+name:''}">
-      <div class="fp-circle fp-sub-circle" style="background:${bg};border-color:${border};${!name?'opacity:0.35;border-style:dashed':''}">
-        <span class="fp-jnum" style="color:${fg};font-size:12px">${name ? jersey : '?'}</span>
-      </div>
-      <div class="fp-pname" style="color:#fff;font-size:9px">${firstName ? `<span style="opacity:0.8">${firstName}</span><br><strong>${lastName}</strong>` : '<span style="opacity:0.4">—</span>'}</div>
-      <div class="fp-ppos" style="color:rgba(255,255,255,0.5);font-size:8px">${s.label}</div>
-    </div>`;
-  }
-
-  const unassigned = starters.filter(p => !t.teamSlots[p.num]).length;
-  const fieldHeight = grade === 'u12' ? 115 : 105;
-
-  return `
-    <style>
-      .fp-wrap { position:relative; width:100%; border-radius:14px; overflow:hidden;
-        background: linear-gradient(180deg, #1a5c28 0%, #2d7a3a 30%, #317f3e 50%, #2d7a3a 70%, #1a5c28 100%);
-        box-shadow:0 6px 24px rgba(0,0,0,0.35); margin-bottom:1rem; }
-      .fp-field { position:relative; width:100%; padding-bottom:${fieldHeight}%; }
-      .fp-svg { position:absolute; inset:0; width:100%; height:100%; }
-      .fp-token { position:absolute; transform:translate(-50%,-50%); text-align:center; z-index:3; width:13%; }
-      .fp-circle { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center;
-        margin:0 auto 3px; border:2px solid; box-shadow:0 3px 10px rgba(0,0,0,0.5); }
-      .fp-jnum { font-size:15px; font-weight:800; line-height:1; }
-      .fp-pname { font-size:9.5px; line-height:1.3; text-shadow:0 1px 4px rgba(0,0,0,0.9); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-      .fp-ppos { font-size:8px; text-shadow:0 1px 3px rgba(0,0,0,0.9); margin-top:1px; }
-      .fp-subs-row { display:flex; justify-content:center; flex-wrap:wrap; gap:6px; padding:12px 8px 14px;
-        border-top:1px solid rgba(255,255,255,0.15); background:rgba(0,0,0,0.2); }
-      .fp-subs-label { width:100%; text-align:center; font-size:10px; font-weight:600; color:rgba(255,255,255,0.5);
-        letter-spacing:0.1em; text-transform:uppercase; margin-bottom:4px; }
-      .fp-sub-token { text-align:center; width:52px; }
-      .fp-sub-circle { width:36px; height:36px; }
-      .fp-warn { font-size:13px; color:#ff9500; padding:8px 12px; background:#fff3e0; border-radius:8px; margin-bottom:10px; }
-    </style>
-
-    ${unassigned > 0 ? `<div class="fp-warn">⚠️ ${unassigned} position${unassigned>1?'s':''} unassigned — fill in the Positions view first.</div>` : ''}
-
-    <div class="section-label" style="margin-bottom:8px">${TEAMS[state.team].label} · ${AGE_GRADES[grade].label}${t.match.opponent?' · vs '+t.match.opponent:''}</div>
-
-    <div class="fp-wrap">
-      <div class="fp-field">
-        <svg class="fp-svg" viewBox="0 0 100 ${fieldHeight}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-          ${Array.from({length:8},(_,i)=>`<rect x="0" y="${i*fieldHeight/8}" width="100" height="${fieldHeight/16}" fill="${i%2===0?'rgba(0,0,0,0.04)':'rgba(255,255,255,0.04)'}" />`).join('')}
-          <rect x="2" y="3" width="96" height="${fieldHeight-6}" fill="none" stroke="white" stroke-width="0.5" opacity="0.6"/>
-          <line x1="2" y1="${fieldHeight*0.5}" x2="98" y2="${fieldHeight*0.5}" stroke="white" stroke-width="0.4" opacity="0.5"/>
-          <line x1="2" y1="${fieldHeight*0.28}" x2="98" y2="${fieldHeight*0.28}" stroke="white" stroke-width="0.3" opacity="0.35" stroke-dasharray="2,2"/>
-          <line x1="2" y1="${fieldHeight*0.72}" x2="98" y2="${fieldHeight*0.72}" stroke="white" stroke-width="0.3" opacity="0.35" stroke-dasharray="2,2"/>
-          <line x1="2" y1="${fieldHeight*0.09}" x2="98" y2="${fieldHeight*0.09}" stroke="white" stroke-width="0.4" opacity="0.5"/>
-          <line x1="2" y1="${fieldHeight*0.91}" x2="98" y2="${fieldHeight*0.91}" stroke="white" stroke-width="0.4" opacity="0.5"/>
-          <rect x="2" y="3" width="96" height="${fieldHeight*0.06}" fill="rgba(255,255,255,0.05)"/>
-          <rect x="2" y="${fieldHeight*0.94}" width="96" height="${fieldHeight*0.06}" fill="rgba(255,255,255,0.05)"/>
-          <line x1="43" y1="3" x2="43" y2="${fieldHeight*0.09}" stroke="#ffe066" stroke-width="0.7" opacity="0.8"/>
-          <line x1="57" y1="3" x2="57" y2="${fieldHeight*0.09}" stroke="#ffe066" stroke-width="0.7" opacity="0.8"/>
-          <line x1="43" y1="5.5" x2="57" y2="5.5" stroke="#ffe066" stroke-width="0.5" opacity="0.8"/>
-          <text x="50" y="${fieldHeight*0.5+2}" text-anchor="middle" font-size="3" fill="rgba(255,255,255,0.25)" font-family="sans-serif">HALFWAY</text>
-        </svg>
-        ${starters.map(p => playerToken(p.label, p.num)).join('')}
-      </div>
-      <div class="fp-subs-row">
-        <div class="fp-subs-label">Bench</div>
-        ${subs.map(subToken).join('')}
-      </div>
-    </div>
-  `;
-}
-
-
-function calcStats(player) {
-  // Training: cols are 8 sessions, last 4 weeks = last 4 entries
-  // We track training as a separate array on each player if present, else derive from fri/sun
-  // Use the training attendance data embedded in rawSquad via tr array if present
-  // For now derive from the spreadsheet-sourced data we have
-
-  // Training data — pulled from spreadsheet (8 sessions)
-  // We store as p.tr = ['Yes','Yes','No',...] etc — check if it exists
-  const tr = player.tr || [];
-  const rainedOut = player.trRainedOut || []; // indices of rained-out sessions
-  const totalSessions = tr.filter((_,i) => !rainedOut.includes(i)).length;
-  const attended = tr.filter((v,i) => !rainedOut.includes(i) && v === 'Yes').length;
-
-  // Last 4 weeks (last 4 non-rained-out sessions)
-  const last4Sessions = tr.map((v,i) => ({v,i})).filter(({i}) => !rainedOut.includes(i)).slice(-4);
-  const last4Attended = last4Sessions.filter(({v}) => v === 'Yes').length;
-  const last4Pct = last4Sessions.length > 0 ? Math.round(last4Attended / last4Sessions.length * 100) : null;
-
-  // Use friS/sunS (spreadsheet-derived status) for accurate stats
-  const friS = player.friS || player.fri || [];
-  const sunS = player.sunS || player.sun || [];
-
-  const friStarted  = friS.filter(v => v === 'Started').length;
-  const friSub      = friS.filter(v => v === 'Sub').length;
-  const friPlayed   = friStarted + friSub;
-  const friOut      = friS.filter(v => v === 'Unavailable').length;
-  const friNS       = friS.filter(v => v === 'Not Selected').length;
-
-  const sunStarted  = sunS.filter(v => v === 'Started').length;
-  const sunSub      = sunS.filter(v => v === 'Sub').length;
-  const sunPlayed   = sunStarted + sunSub;
-  const sunOut      = sunS.filter(v => v === 'Unavailable').length;
-  const sunNS       = sunS.filter(v => v === 'Not Selected').length;
-
-  return { attended, totalSessions, last4Attended, last4Total: last4Sessions.length, last4Pct,
-           friStarted, friSub, friPlayed, friOut, friNS,
-           sunStarted, sunSub, sunPlayed, sunOut, sunNS };
-}
-
-function buildStats() {
-  const allPlayers = rawSquad.filter(p => !p.friIneligible || p.sunEligible !== 'No');
-  const rows = allPlayers.map(p => ({ p, s: calcStats(p) }));
-
-  // Sort by: most fri games played desc, then most sun games played
-  rows.sort((a,b) => (b.s.friPlayed + b.s.sunPlayed) - (a.s.friPlayed + a.s.sunPlayed));
-
-  const tableRows = rows.map(({p, s}) => {
-    const trPct = s.last4Pct !== null ? s.last4Pct + '%' : '—';
-    const trPctColor = s.last4Pct === null ? '#aeaeb2' : s.last4Pct >= 75 ? '#34c759' : s.last4Pct >= 50 ? '#ff9500' : '#ff3b30';
-    return `<tr>
-      <td style="font-weight:600;white-space:nowrap">${p.jersey??'—'} ${p.name.split(' ').map((w,i)=>i===0?w[0]+'.':w).join(' ')}</td>
-      <td>${s.attended}/${s.totalSessions||'—'}</td>
-      <td style="color:${trPctColor};font-weight:600">${trPct}</td>
-      <td>${s.friStarted}</td>
-      <td>${s.friSub}</td>
-      <td>${s.friNS||0}</td>
-      <td>${s.sunStarted}</td>
-      <td>${s.sunSub}</td>
-      <td>${s.sunNS||0}</td>
-    </tr>`;
-  }).join('');
-
-  // Graphic view — WhatsApp-friendly monospace block
-  const header = `🏉 COOGEE SEAHORSES — PLAYER STATS\n${'─'.repeat(52)}\n` +
-    `${'Player'.padEnd(16)}${'Tr%'.padStart(4)} ${'Fri'.padStart(3)} ${'Sub'.padStart(3)} ${'NS'.padStart(3)} ${'Sun'.padStart(3)} ${'Sub'.padStart(3)} ${'NS'.padStart(3)}\n` +
-    `${'─'.repeat(52)}`;
-
-  const graphicRows = rows.map(({p, s}) => {
-    const name = (p.name.split(' ').map((w,i)=>i===0?w[0]+'.':w).join(' ')).padEnd(16).slice(0,16);
-    const pct  = (s.last4Pct !== null ? s.last4Pct+'%' : '—').padStart(4);
-    const fs   = String(s.friStarted).padStart(3);
-    const fb   = String(s.friSub).padStart(3);
-    const fn_  = String(s.friNS||0).padStart(3);
-    const ss   = String(s.sunStarted).padStart(3);
-    const sb   = String(s.sunSub).padStart(3);
-    const sn_  = String(s.sunNS||0).padStart(3);
-    return `${name}${pct} ${fs} ${fb} ${fn_} ${ss} ${sb} ${sn_}`;
-  }).join('\n');
-
-  const graphicText = header + '\n' + graphicRows + '\n' + '─'.repeat(52) +
-    '\nFri/Sun: Str=Started  Sub=Sub  NS=Not selected\nTr%=Training attendance last 4 weeks';
-
-  return `
-    <style>
-      .stats-table { width:100%; border-collapse:collapse; font-size:12px; }
-      .stats-table th { background:#f2f2f7; padding:6px 8px; text-align:center; font-size:11px; font-weight:600; color:#636366; white-space:nowrap; position:sticky; top:0; }
-      .stats-table th:first-child { text-align:left; }
-      .stats-table td { padding:7px 8px; text-align:center; border-bottom:1px solid #f2f2f7; }
-      .stats-table td:first-child { text-align:left; }
-      .stats-table tr:hover td { background:#f9f9fb; }
-      .stats-table .grp-header { background:#e8f4fd; font-size:10px; font-weight:700; color:#007aff; letter-spacing:0.05em; text-transform:uppercase; }
-      .stats-scroll { overflow-x:auto; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,0.08); background:#fff; }
-      .graphic-box { background:#1a1a1a; color:#e8e8e8; font-family:monospace; font-size:11px; line-height:1.7; padding:14px; border-radius:12px; white-space:pre; overflow-x:auto; }
-      .stats-toggle { display:flex; background:#f2f2f7; border-radius:10px; padding:3px; gap:2px; margin-bottom:1rem; width:fit-content; }
-      .stats-toggle-btn { border:none; border-radius:8px; padding:6px 14px; font-size:13px; font-weight:500; cursor:pointer; transition:all 0.15s; }
-    </style>
-
-    <div class="section-label">Player statistics</div>
-    <div class="notice" style="margin-bottom:1rem">Training % = last 4 weeks, excluding rained-out sessions. NS = available but not selected.</div>
-
-    <div class="stats-toggle">
-      <button class="stats-toggle-btn" id="stats-table-btn"
-        style="background:${state.statsView==='table'?'#fff':'transparent'};color:${state.statsView==='table'?'#007aff':'#8e8e93'};box-shadow:${state.statsView==='table'?'0 1px 4px rgba(0,0,0,0.12)':'none'}">
-        Table
-      </button>
-      <button class="stats-toggle-btn" id="stats-graphic-btn"
-        style="background:${state.statsView==='graphic'?'#fff':'transparent'};color:${state.statsView==='graphic'?'#007aff':'#8e8e93'};box-shadow:${state.statsView==='graphic'?'0 1px 4px rgba(0,0,0,0.12)':'none'}">
-        📋 WhatsApp graphic
-      </button>
-    </div>
-
-    ${state.statsView === 'table' ? `
-    <div class="stats-scroll">
-      <table class="stats-table">
-        <thead>
-          <tr>
-            <th rowspan="2" style="text-align:left">Player</th>
-            <th rowspan="2">Tr</th>
-            <th rowspan="2">Tr%<br><span style="font-weight:400;opacity:0.7">4wk</span></th>
-            <th colspan="3" style="border-bottom:1px solid #e5e5ea">Friday</th>
-            <th colspan="3" style="border-bottom:1px solid #e5e5ea">Sunday</th>
-          </tr>
-          <tr>
-            <th>Str</th><th>Sub</th><th>NS</th>
-            <th>Str</th><th>Sub</th><th>NS</th>
-          </tr>
-        </thead>
-        <tbody>${tableRows}</tbody>
-      </table>
-    </div>
-    ` : `
-    <div class="graphic-box" id="graphic-content">${graphicText}</div>
-    <button class="btn btn-primary btn-full" id="copy-graphic" style="margin-top:10px">Copy for WhatsApp</button>
-    `}
-  `;
-}
-
-
-function buildExport(){
-  const sq=squad(); const pos=positions(); const t=td();
-  const starters=pos.filter(p=>!p.label.startsWith('Sub'));
-  const bench=pos.filter(p=>p.label.startsWith('Sub'));
-  const m=t.match;
-  const avail    =sq.filter(p=>t.pollResults[p.name]==='Yes, count me in').length;
-  const unavail  =sq.filter(p=>t.pollResults[p.name]==="Sorry, can't make it").length;
-  const ride     =sq.filter(p=>t.pollResults[p.name]==='Help! I need a ride, please').length;
-  const unavailList=sq.filter(p=>t.pollResults[p.name]==="Sorry, can't make it");
-  const rideList   =sq.filter(p=>t.pollResults[p.name]==='Help! I need a ride, please');
-  function row(p){const name=t.teamSlots[p.num]||'(unassigned)';const pl=sq.find(s=>s.name===name);const lbl=(p.xplorer||p.label);return `${String(p.num).padStart(2)}  ${lbl.padEnd(20)}${name}${pl&&pl.jersey?' #'+pl.jersey:''}`;}
-  const code=toCode();
-  return `
-    <div class="section-label">Matchday · ${TEAMS[state.team].label} · ${AGE_GRADES[td().grade].label}${td().round&&td().round!=='custom'?' · Round '+td().round:''}</div>
-    <div class="card" style="margin-bottom:1rem">
-      <div style="font-size:17px;font-weight:700;margin-bottom:3px">${m.opponent?'vs '+esc(m.opponent):'Match not set'}</div>
-      <div style="font-size:13px;color:#636366">${[m.date,m.venue,m.time].filter(Boolean).map(esc).join(' · ')}</div>
-      <div class="divider"></div>
-      <div style="display:flex;gap:16px;font-size:13px;flex-wrap:wrap">
-        <span style="color:#34c759;font-weight:600">${avail} available</span>
-        <span style="color:#ff3b30;font-weight:600">${unavail} unavailable</span>
-        ${ride>0?`<span style="color:#ff9500;font-weight:600">${ride} need a ride</span>`:''}
-      </div>
-    </div>
-    <div class="section-label">Starters — enter into Rugby Xplorer</div>
-    <div class="export-box">${starters.map(row).join('\n')}</div>
-    <div class="section-label" style="margin-top:1rem">Bench</div>
-    <div class="export-box">${bench.map(row).join('\n')}</div>
-    <button class="btn btn-primary btn-full" id="copy-sheet" style="margin-top:10px">Copy full team sheet</button>
-    ${unavailList.length>0?`
-      <div class="section-label" style="margin-top:1.5rem">Unavailable</div>
-      ${unavailList.map(p=>`<div class="card" style="padding:10px 14px"><div class="row"><span class="badge-num badge">${p.jersey??'—'}</span><span class="player-name">${p.name}</span><span class="badge badge-no">Out</span></div></div>`).join('')}`:''}
-    ${rideList.length>0?`
-      <div class="section-label" style="margin-top:1rem">Needs a ride</div>
-      ${rideList.map(p=>`<div class="card" style="padding:10px 14px"><div class="row"><span class="badge-num badge">${p.jersey??'—'}</span><span class="player-name">${p.name}</span><span class="badge badge-ride">Ride</span></div></div>`).join('')}`:''}
-    <div class="divider" style="margin-top:1.5rem"></div>
-    <div class="section-label">Save &amp; restore</div>
-    <div class="notice" style="margin-bottom:12px">Both teams saved together. Use export code to restore on another device.</div>
-    <div style="font-size:12px;color:#636366;margin-bottom:4px">Your save code</div>
-    <textarea class="save-code" id="export-code" readonly style="margin-bottom:8px">${code}</textarea>
-    <button class="btn btn-sm" id="copy-code" style="width:100%;margin-bottom:1rem">Copy save code</button>
-    <div style="font-size:12px;color:#636366;margin-bottom:4px">Restore from a saved code</div>
-    <textarea class="save-code" id="import-code" placeholder="Paste your save code here…" style="margin-bottom:8px"></textarea>
-    <button class="btn btn-primary btn-full" id="restore-btn">Restore from code</button>
-  `;
-}
-
-function autoFill(){
-  const sq=squad(); const pos=positions(); const t=td();
-  const available=sq.filter(p=>t.pollResults[p.name]==='Yes, count me in'||t.pollResults[p.name]==='Help! I need a ride, please');
-  const newSlots={}; const used=new Set();
-  pos.filter(p=>!p.label.startsWith('Sub')).forEach(pos=>{
-    const pref=available.filter(p=>!used.has(p.name)&&p.prefXplorer.includes(pos.label));
-    const alt =available.filter(p=>!used.has(p.name)&&p.altXplorer.includes(pos.label));
-    const pick=pref[0]||alt[0];
-    if(pick){newSlots[pos.num]=pick.name;used.add(pick.name);}
-  });
-  pos.filter(p=>p.label.startsWith('Sub')).forEach(pos=>{
-    const rem=available.filter(p=>!used.has(p.name));
-    if(rem[0]){newSlots[pos.num]=rem[0].name;used.add(rem[0].name);}
-  });
-  t.teamSlots=newSlots; storageSave(); render();
-}
-
-function attachEvents(){
-  document.querySelectorAll('.section-btn').forEach(b=>b.addEventListener('click',()=>{
-    state.section=b.dataset.section;
-    // Set sensible default tab when switching sections
-    if(state.section==='availability' && !['poll','team','export'].includes(state.tab)) state.tab='poll';
-    if(state.section==='squad' && !['squad','stats'].includes(state.tab)) state.tab='squad';
-    render();
-  }));
-  document.querySelectorAll('.tab').forEach(el=>el.addEventListener('click',()=>{state.tab=el.dataset.tab;render();}));
-  document.querySelectorAll('[data-team]').forEach(b=>b.addEventListener('click',()=>{
-    if(state.team!==b.dataset.team){state.team=b.dataset.team;storageSave();render();showToast('Switched to '+TEAMS[b.dataset.team].label);}
-  }));
-  document.querySelectorAll('[data-grade]').forEach(b=>b.addEventListener('click',()=>{
-    const t=td();
-    if(t.grade!==b.dataset.grade){t.grade=b.dataset.grade;t.teamSlots={};storageSave();render();showToast('Switched to '+AGE_GRADES[b.dataset.grade].label);}
-  }));
-  const sn=document.getElementById('save-now');
-  if(sn) sn.addEventListener('click',()=>{storageSave();showToast('Saved!');render();});
-  const sc=document.getElementById('show-code');
-  if(sc) sc.addEventListener('click',()=>{state.tab='export';render();setTimeout(()=>document.getElementById('export-code')?.scrollIntoView({behavior:'smooth'}),100);});
-  if(state.tab==='poll'){
-    const roundSel=document.getElementById('m-round');
-    if(roundSel) roundSel.addEventListener('change',()=>{
-      const t=td();
-      const val=roundSel.value;
-      if(val==='custom'||val==='') {
-        t.round=val||null;
-      } else {
-        const rnd=parseInt(val);
-        t.round=rnd;
-        const fixture=(FIXTURES[state.team]||[]).find(f=>f.round===rnd);
-        if(fixture){
-          t.match={opponent:fixture.opponent,date:fixture.date,venue:fixture.venue,time:fixture.time};
-        }
-      }
-      storageSave(); render();
-    });
-    ['opponent','date','venue','time'].forEach(f=>{
-      const el=document.getElementById('m-'+f);
-      if(el) el.addEventListener('input',()=>{td().match[f]=el.value;storageSave();});
-    });
-    document.querySelectorAll('[data-poll]').forEach(sel=>{
-      sel.addEventListener('change',()=>{
-        const t=td();
-        if(sel.value) t.pollResults[sel.dataset.poll]=sel.value;
-        else delete t.pollResults[sel.dataset.poll];
-        storageSave(); render();
-      });
-    });
-    const gt=document.getElementById('go-team');
-    if(gt) gt.addEventListener('click',()=>{state.tab='team';render();});
-  }
-  if(state.tab==='team'){
-    document.querySelectorAll('.view-toggle').forEach(b=>b.addEventListener('click',()=>{
-      state.teamView=b.dataset.view; render();
-    }));
-    document.querySelectorAll('[data-slot]').forEach(sel=>{
-      sel.addEventListener('change',()=>{
-        const t=td();
-        if(sel.value) t.teamSlots[+sel.dataset.slot]=sel.value;
-        else delete t.teamSlots[+sel.dataset.slot];
-        storageSave(); render();
-      });
-    });
-    const af=document.getElementById('auto-fill');
-    if(af) af.addEventListener('click',autoFill);
-    const ct=document.getElementById('clear-team');
-    if(ct) ct.addEventListener('click',()=>{td().teamSlots={};storageSave();render();});
-  }
-  if(state.tab==='stats'){
-    const stBtn=document.getElementById('stats-table-btn');
-    if(stBtn) stBtn.addEventListener('click',()=>{state.statsView='table';render();});
-    const sgBtn=document.getElementById('stats-graphic-btn');
-    if(sgBtn) sgBtn.addEventListener('click',()=>{state.statsView='graphic';render();});
-    const cgBtn=document.getElementById('copy-graphic');
-    if(cgBtn) cgBtn.addEventListener('click',()=>{
-      const txt=document.getElementById('graphic-content')?.textContent||'';
-      navigator.clipboard.writeText(txt).then(()=>{cgBtn.textContent='Copied!';setTimeout(()=>cgBtn.textContent='Copy for WhatsApp',2000);});
-    });
-  }
-  if(state.tab==='export'){
-    const cp=document.getElementById('copy-sheet');
-    if(cp) cp.addEventListener('click',()=>{
-      const t=td();
-      const text=positions().map(p=>{const name=t.teamSlots[p.num]||'(unassigned)';const pl=squad().find(s=>s.name===name);return `${String(p.num).padStart(2)}  ${p.label.padEnd(20)}${name}${pl&&pl.jersey?' #'+pl.jersey:''}`;}).join('\n');
-      navigator.clipboard.writeText(text).then(()=>showToast('Team sheet copied!'));
-    });
-    const cc=document.getElementById('copy-code');
-    if(cc) cc.addEventListener('click',()=>{navigator.clipboard.writeText(document.getElementById('export-code')?.value||'').then(()=>showToast('Save code copied!'));});
-    const rb=document.getElementById('restore-btn');
-    if(rb) rb.addEventListener('click',()=>{const code=document.getElementById('import-code')?.value||'';if(fromCode(code)){storageSave();showToast('Restored!');render();}else showToast('Invalid code — please check and try again');});
-  }
-}
-
-storageLoad();
-savedState=toCode();
-render();
-</script>
 </body>
 </html>
