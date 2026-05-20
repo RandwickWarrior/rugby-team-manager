@@ -655,17 +655,47 @@
 </div>
 
 <script>
-  // Match details — edit these to set the match info shown to players
-  const MATCH = {
-    opponent: 'Rockdale',
-    date: 'Friday 8 May',
-    venue: 'C.A Redmond Field',
-    time: '7:20pm kick-off'
-  };
+  // ── Fixtures — single source of truth, kept in sync with team-manager.html ──
+  // Date strings map to actual JS dates for comparison.
+  // Format: { date: 'Day DD Mon', opponent, venue, time, team }
+  const ALL_FIXTURES = [
+    { team:'Coogee 11',           date:'Fri 24 Apr',  isoDate:'2026-04-24', opponent:'Burraneer Gold',        venue:'John Dwyer Park',       time:'7:10pm' },
+    { team:'Coogee Barbarians 11',date:'Sun 26 Apr',  isoDate:'2026-04-26', opponent:'Hunters Hill Black',    venue:'Boronia Park Field 1',  time:'9:30am' },
+    { team:'Coogee 11',           date:'Fri 1 May',   isoDate:'2026-05-01', opponent:'Clovelly Eagles Blue',  venue:'Nagle Park Field 2',    time:'5:30pm' },
+    { team:'Coogee Barbarians 11',date:'Sun 3 May',   isoDate:'2026-05-03', opponent:'Norths Pirates',        venue:'Nagle Park Field 1',    time:'11:00am'},
+    { team:'Coogee 11',           date:'Fri 8 May',   isoDate:'2026-05-08', opponent:'Rockdale',              venue:'C.A Redmond Oval',      time:'7:20pm' },
+    { team:'Coogee Barbarians 11',date:'Sun 10 May',  isoDate:'2026-05-10', opponent:'Wakehurst',             venue:'Wakehurst Rugby Park',  time:'9:50am' },
+    { team:'Coogee 11',           date:'Fri 15 May',  isoDate:'2026-05-15', opponent:'Burraneer Blue',        venue:'Nagle Park Field 1',    time:'7:20pm' },
+    { team:'Coogee Barbarians 11',date:'Sun 17 May',  isoDate:'2026-05-17', opponent:'Wahroonga Gold',        venue:'Nagle Park Field 1',    time:'9:10am' },
+    { team:'Coogee 11',           date:'Fri 22 May',  isoDate:'2026-05-22', opponent:'Maroubra Missiles',     venue:'Nagle Park Field 2',    time:'5:30pm' },
+    { team:'Coogee 11',           date:'Fri 29 May',  isoDate:'2026-05-29', opponent:'Oatley',                venue:'Nagle Park Field 2',    time:'5:30pm' },
+    { team:'Coogee 11',           date:'Fri 12 Jun',  isoDate:'2026-06-12', opponent:'Clovelly Eagles White', venue:'Nagle Park Field 1',    time:'8:00pm' },
+    { team:'Coogee 11',           date:'Fri 19 Jun',  isoDate:'2026-06-19', opponent:'TBC',                   venue:'Nagle Park Field 1',    time:'8:00pm' },
+  ];
 
-  // Set match info
-  document.getElementById('match-opponent').textContent = 'vs ' + MATCH.opponent;
-  document.getElementById('match-meta').textContent = MATCH.date + ' · ' + MATCH.venue + ' · ' + MATCH.time;
+  // Find the next upcoming fixture (or null if none)
+  function getNextFixture() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    // Find first fixture whose date >= today
+    const upcoming = ALL_FIXTURES
+      .map(f => ({ ...f, jsDate: new Date(f.isoDate) }))
+      .filter(f => f.jsDate >= today)
+      .sort((a, b) => a.jsDate - b.jsDate);
+    return upcoming[0] || null;
+  }
+
+  const nextFixture = getNextFixture();
+
+  // Set match info card
+  if (nextFixture) {
+    document.getElementById('match-opponent').textContent = 'vs ' + nextFixture.opponent;
+    document.getElementById('match-meta').textContent =
+      nextFixture.team + ' · ' + nextFixture.date + ' · ' + nextFixture.venue + ' · ' + nextFixture.time + ' kick-off';
+  } else {
+    document.getElementById('match-opponent').textContent = 'Next fixture not available';
+    document.getElementById('match-meta').textContent = 'Check back soon for the next game details';
+  }
 
   // State
   let selectedAvailability = null;
