@@ -253,6 +253,84 @@ function squadForTeam(grade, team) {
   return buildSquad(grade).filter(p=>isEligible(p, team));
 }
 
+// ── Backend URL — paste your Apps Script deployment URL here ─────────────────
+// Same URL as in availability-form.html
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
+
+// ── Backend helpers ───────────────────────────────────────────────────────────
+
+async function apiGet(params) {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return null;
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const res = await fetch(APPS_SCRIPT_URL + '?' + qs);
+    return await res.json();
+  } catch(e) { console.warn('Backend unavailable:', e); return null; }
+}
+
+async function apiPost(payload) {
+  if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return null;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST', body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch(e) { console.warn('Backend unavailable:', e); return null; }
+}
+
+// Fetch responses from Sheet and merge into current team's pollResults
+// Sheet responses take precedence over locally saved data
+async function syncResponsesFromSheet() {
+  const t = td();
+  const teamLabel = TEAMS[state.team].label;
+  const data = await apiGet({ action: 'responses', round: t.round, team: teamLabel });
+  if (!data || !data.responses) return false;
+
+  let changed = false;
+  for (const [player, info] of Object.entries(data.responses)) {
+    const mapped = info.availability; // already in poll option format
+    if (t.pollResults[player] !== mapped) {
+      t.pollResults[player] = mapped;
+      changed = true;
+    }
+    // Also handle ride — store as separate marker
+    if (info.needsRide && mapped === 'Yes, count me in') {
+      t.pollResults[player] = 'Yes, count me in';
+    }
+  }
+  if (changed) { storageSave(); }
+  return changed;
+}
+
+// Save team slots to Sheet
+async function saveTeamToSheet() {
+  const t = td();
+  await apiPost({
+    action: 'saveTeam',
+    round: t.round,
+    team: TEAMS[state.team].label,
+    grade: t.grade,
+    slots: t.teamSlots
+  });
+}
+
+// Load team slots from Sheet (merge with local — Sheet wins)
+async function loadTeamFromSheet() {
+  const t = td();
+  const data = await apiGet({
+    action: 'team',
+    round: t.round,
+    team: TEAMS[state.team].label
+  });
+  if (!data || !data.slots || Object.keys(data.slots).length === 0) return false;
+  // Convert string keys from JSON back to numbers
+  const slots = {};
+  for (const [k, v] of Object.entries(data.slots)) { slots[+k] = v; }
+  t.teamSlots = slots;
+  storageSave();
+  return true;
+}
+
 const POLL_OPTIONS = ['Yes, count me in',"Sorry, can't make it",'Help! I need a ride, please','Other (Contact Manager)'];
 const SAVE_KEY = 'rugby_mgr_v3';
 
@@ -361,6 +439,12 @@ function fromCode(code) {
   } catch(e){return false;}
 }
 function storageSave(){try{localStorage.setItem(SAVE_KEY,toCode());savedState=toCode();return true;}catch(e){return false;}}
+
+// Push team selection to sheet whenever slots change
+function saveTeamSlots() {
+  storageSave();
+  saveTeamToSheet(); // async, fire and forget
+}
 function storageLoad(){try{const v=localStorage.getItem(SAVE_KEY);if(v){fromCode(v);return true;}}catch(e){}return false;}
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -389,6 +473,7 @@ function render() {
     <div class="save-bar">
       <div class="save-dot ${clean?'':'unsaved'}"></div>
       <span style="flex:1;font-weight:500">${clean?'Saved':'Unsaved changes'}</span>
+      <button class="btn btn-sm" id="sync-now" style="margin-right:4px;background:#34c759;color:#fff;border-color:#34c759">↻ Sync</button>
       <button class="btn btn-sm" id="save-now" style="margin-right:4px">Save</button>
       <button class="btn btn-sm" id="show-code">Export code</button>
     </div>
@@ -965,6 +1050,15 @@ function attachEvents(){
     const t=td();
     if(t.grade!==b.dataset.grade){t.grade=b.dataset.grade;t.teamSlots={};storageSave();render();showToast('Switched to '+AGE_GRADES[b.dataset.grade].label);}
   }));
+  const syncBtn=document.getElementById('sync-now');
+  if(syncBtn) syncBtn.addEventListener('click', async ()=>{
+    syncBtn.textContent='Syncing…';
+    const r = await syncResponsesFromSheet();
+    const t = await loadTeamFromSheet();
+    if(r||t){ savedState=toCode(); render(); showToast('Synced ✓'); }
+    else { showToast(APPS_SCRIPT_URL==='YOUR_APPS_SCRIPT_URL_HERE'?'Add Apps Script URL first':'No new data'); }
+    if(syncBtn) syncBtn.textContent='↻ Sync';
+  });
   const sn=document.getElementById('save-now');
   if(sn) sn.addEventListener('click',()=>{storageSave();showToast('Saved!');render();});
   const sc=document.getElementById('show-code');
@@ -1010,13 +1104,13 @@ function attachEvents(){
         const t=td();
         if(sel.value) t.teamSlots[+sel.dataset.slot]=sel.value;
         else delete t.teamSlots[+sel.dataset.slot];
-        storageSave(); render();
+        saveTeamSlots(); render();
       });
     });
     const af=document.getElementById('auto-fill');
     if(af) af.addEventListener('click',autoFill);
     const ct=document.getElementById('clear-team');
-    if(ct) ct.addEventListener('click',()=>{td().teamSlots={};storageSave();render();});
+    if(ct) ct.addEventListener('click',()=>{td().teamSlots={};saveTeamSlots();render();});
   }
   if(state.tab==='stats'){
     const stBtn=document.getElementById('stats-table-btn');
@@ -1046,6 +1140,17 @@ function attachEvents(){
 storageLoad();
 savedState=toCode();
 render();
+
+// After initial render, sync responses and team from sheet in background
+(async () => {
+  const responsesChanged = await syncResponsesFromSheet();
+  const teamChanged = await loadTeamFromSheet();
+  if (responsesChanged || teamChanged) {
+    savedState = toCode();
+    render();
+    showToast('Synced with shared data ✓');
+  }
+})();
 </script>
 </body>
 </html>
