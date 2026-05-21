@@ -154,7 +154,7 @@ const rawSquad = [
   {name:'Thomas Morgan', jersey:11, group:'Back', p1:'Fly Half', p2:'Left Centre', friEligible:'Yes', sunEligible:'No', fri:['In','In','Out','In'], friPos:['','','',''], sun:['Out','Out','In','In'], sunPos:['','','',''], friS:['Started','Started','Started','Started'], sunS:['Unavailable','Unavailable','N/A','N/A'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
   {name:'Henry Scott', jersey:17, group:'Forward', p1:'Left Lock', p2:'Right Lock', friEligible:'Yes', sunEligible:'Sometimes', fri:['N.R.','Out','In','In'], friPos:['','','',''], sun:['','Out','In','In'], sunPos:['','','','Sub 4'], friS:['N.R.','Unavailable','Started','Started'], sunS:['Started','Unavailable','Not Selected','Started'], tr:['Yes','Yes','Yes','Yes','No','Yes','Yes',''], trRainedOut:[3]},
   {name:'Edward Macassey', jersey:10, group:'Back', p1:'Scrum Half', p2:'Number Eight', friEligible:'Yes', sunEligible:'Yes', fri:['In','In','In','In'], friPos:['','','',''], sun:['Out','In','In','In'], sunPos:['','','Scrum Half','Scrum Half'], friS:['Started','Started','Started','Started'], sunS:['Unavailable','Started','Started','Started'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
-  {name:'Lachlan McDonald', jersey:12, group:'Back', p1:'Left Wing', p2:'Left Centre', friEligible:'Yes', sunEligible:'No', fri:['In','In','In','In'], friPos:['','','',''], sun:['','','','In'], sunPos:['','','','Left Centre'], friS:['Started','Started','Started','Started'], sunS:['','','N/A','Started'], tr:['Yes','Yes','Yes','No','No','Yes','Yes',''], trRainedOut:[3]},
+  {name:'Lachlan McDonald', jersey:12, group:'Back', p1:'Left Wing', p2:'Left Centre', friEligible:'Yes', sunEligible:'Yes', fri:['In','In','In','In'], friPos:['','','',''], sun:['','','','In'], sunPos:['','','','Left Centre'], friS:['Started','Started','Started','Started'], sunS:['','','N/A','Started'], tr:['Yes','Yes','Yes','No','No','Yes','Yes',''], trRainedOut:[3]},
   {name:'Max Boss', jersey:9, group:'Back', p1:'Fly Half', p2:'Right Wing', friEligible:'Yes', sunEligible:'No', fri:['Out','Out','In','In'], friPos:['','','',''], sun:['Out','Out','In',''], sunPos:['','','',''], friS:['Unavailable','Unavailable','Started','Started'], sunS:['Unavailable','Unavailable','N/A','N/A'], tr:['Yes','Yes','Yes','No','No','Yes','No',''], trRainedOut:[3]},
   {name:'Nathan Evans', jersey:13, group:'Back', p1:'Scrum Half', p2:'Left Wing', friEligible:'Yes', sunEligible:'Yes', fri:['In','In','In','In'], friPos:['','','',''], sun:['Out','In','In','In'], sunPos:['','','Right Centre','Right Centre'], friS:['Started','Started','Started','Started'], sunS:['Unavailable','Started','Started','Started'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
   {name:'Beau Hack', jersey:6, group:'Back', p1:'Left Centre', p2:'Right Centre', friEligible:'Yes', sunEligible:'Sometimes', fri:['In','In','In','In'], friPos:['','','',''], sun:['Out','In','In','In'], sunPos:['','','',''], friS:['Started','Started','Started','Started'], sunS:['Started','Started','Not Selected','Not Selected'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes',''], trRainedOut:[3]},
@@ -255,7 +255,7 @@ function squadForTeam(grade, team) {
 
 // ── Backend URL — paste your Apps Script deployment URL here ─────────────────
 // Same URL as in availability-form.html
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
+const APPS_SCRIPT_URL = 'YOUR_APPS_SCRIPT_URL_HERE';
 
 // ── Backend helpers ───────────────────────────────────────────────────────────
 
@@ -358,6 +358,7 @@ const FIXTURES = {
     { round:2,  isoDate:'2026-05-03', opponent:'Norths Pirates',        date:'Sun 3 May',   venue:'Nagle Park Field 1',    time:'11:00am', result:'L 14–29' },
     { round:3,  isoDate:'2026-05-10', opponent:'Wakehurst',             date:'Sun 10 May',  venue:'Wakehurst Rugby Park',  time:'9:50am',  result:'D 26–26' },
     { round:4,  isoDate:'2026-05-17', opponent:'Wahroonga Gold',        date:'Sun 17 May',  venue:'Nagle Park Field 1',    time:'9:10am',  result:'W 36–7' },
+    { round:5,  isoDate:'2026-05-24', opponent:'Mosman Dolphins',        date:'Sun 24 May',  venue:'Nagle Park Field 2',    time:'9:00am',  result:'' },
   ]
 };
 
@@ -383,8 +384,6 @@ function emptyData(team) {
   };
 }
 
-// Pre-populate Round 3 availability from spreadsheet
-const R3_POLL = {"Rafferty Moffitt": "Yes, count me in", "William English": "Yes, count me in", "Jackson Kendall": "Yes, count me in", "Patrick Keenen": "Yes, count me in", "Xavier Reddy": "Yes, count me in", "Michael Dunworth": "Yes, count me in", "Thomas Morgan": "Yes, count me in", "Henry Scott": "Yes, count me in", "Edward Macassey": "Yes, count me in", "Lachlan McDonald": "Yes, count me in", "Max Boss": "Yes, count me in", "Nathan Evans": "Yes, count me in", "Beau Hack": "Yes, count me in", "Teddy Russell": "Yes, count me in", "Kycen Puroku": "Yes, count me in", "Freddie Kirrane": "Yes, count me in", "Aiden Schultz": "Yes, count me in", "Kai Lianto": "Yes, count me in", "Theo Deichsel": "Yes, count me in", "Archer Price": "Yes, count me in", "Sasha Hayim": "Yes, count me in", "Watene Falemanu": "Yes, count me in", "Elliot Dean": "Yes, count me in", "Xavier Saunders": "Sorry, can't make it"};
 
 let state = {
   tab: 'poll',
@@ -392,35 +391,11 @@ let state = {
   teamView: 'positions',
   statsView: 'table',
   team: 'seahorses',
-  teams: { seahorses: emptyData('seahorses'), barbarians: emptyData('barbarians') }
+  teams: {
+    seahorses: emptyData('seahorses'),
+    barbarians: emptyData('barbarians')
+  }
 };
-
-const R3_TEAM = {
-  "1":  "Patrick Keenen",    // Loosehead Prop — pref pos, 7/7 training, started R2+R3
-  "2":  "Kai Lianto",        // Hooker — specialist, started R1+R3
-  "3":  "Theo Deichsel",     // Tight Head Prop — pref pos per new spreadsheet, 7/7 training
-  "4":  "Jackson Kendall",   // Right Lock — pref pos, 7/7 training, started all 3 games
-  "5":  "William English",   // Left Lock — 7/7 training, started R2+R3
-  "6":  "Michael Dunworth",  // Number Eight — pref pos, 7/7 training, started all 3 games
-  "7":  "Edward Macassey",   // Scrum Half — pref pos, 7/7 training, started all 3 games
-  "8":  "Thomas Morgan",     // Fly Half — pref pos, 7/7 training, started all 3 games
-  "9":  "Lachlan McDonald",  // Left Wing — pref pos, started all 3 games
-  "10": "Beau Hack",         // Left Centre — pref pos, 7/7 training, started all 3 games
-  "11": "Kycen Puroku",      // Right Centre — pref pos, 7/7 training, started all 3 games
-  "12": "Freddie Kirrane",   // Right Wing — pref pos, started all 3 games
-  "13": "Xavier Reddy",      // Sub 1 — 6/7 training, started R2+R3 at #8, forward cover
-  "14": "Nathan Evans",      // Sub 2 — 7/7 training, sub all 3 games, back/SH cover
-  "15": "Watene Falemanu",   // Sub 3 — front row cover, started R1+R3 at LHP
-  "16": "Sasha Hayim",       // Sub 4 — 7/7 training, played R1+R3, wing cover
-  "17": "Elliot Dean",       // Sub 5 — 5/7 training, lock/hooker cover
-  "18": "Rafferty Moffitt",  // Sub 6 — 6/7 training, available R3 after 2 games out
-};
-
-// Inject R3 poll results and team if seahorses hasn't been saved yet (fresh load)
-if(Object.keys(state.teams.seahorses.pollResults).length === 0 && state.teams.seahorses.round === 3) {
-  state.teams.seahorses.pollResults = {...R3_POLL};
-  state.teams.seahorses.teamSlots = {...R3_TEAM};
-}
 let savedState = null;
 
 function td()        { return state.teams[state.team]; }
@@ -1138,6 +1113,18 @@ function attachEvents(){
 }
 
 storageLoad();
+
+// Inject R5 poll results and team if seahorses has no saved data yet
+// Pre-populate Round 3 availability from spreadsheet
+const R5_POLL = {"Rafferty Moffitt": "Yes, count me in", "William English": "Yes, count me in", "Jackson Kendall": "Yes, count me in", "Patrick Keenen": "Yes, count me in", "Xavier Reddy": "Yes, count me in", "Michael Dunworth": "Yes, count me in", "Thomas Morgan": "Yes, count me in", "Henry Scott": "Yes, count me in", "Edward Macassey": "Yes, count me in", "Lachlan McDonald": "Yes, count me in", "Max Boss": "Yes, count me in", "Nathan Evans": "Yes, count me in", "Beau Hack": "Yes, count me in", "Teddy Russell": "Yes, count me in", "Kycen Puroku": "Yes, count me in", "Freddie Kirrane": "Yes, count me in", "Aiden Schultz": "Yes, count me in", "Kai Lianto": "Yes, count me in", "Theo Deichsel": "Yes, count me in", "Archer Price": "Yes, count me in", "Sasha Hayim": "Yes, count me in", "Watene Falemanu": "Yes, count me in", "Elliot Dean": "Yes, count me in", "Xavier Saunders": "Sorry, can't make it"};
+const R5_TEAM = {"1": "Watene Falemanu", "2": "Teddy Russell", "3": "Theo Deichsel", "4": "William English", "5": "Michael Dunworth", "6": "Lachlan McDonald", "7": "Nathan Evans", "8": "Max Boss", "9": "Thomas Morgan", "10": "Beau Hack", "11": "Kycen Puroku", "12": "Freddie Kirrane", "13": "Kai Lianto", "14": "Patrick Keenen", "15": "Jackson Kendall", "16": "Xavier Reddy", "17": "Edward Macassey", "18": "Archer Price"};
+
+// Inject R5 poll results and team if seahorses hasn't been saved yet (fresh load)
+if(Object.keys(state.teams.seahorses.pollResults).length === 0 && state.teams.seahorses.round === 5) {
+  state.teams.seahorses.pollResults = {...R5_POLL};
+  state.teams.seahorses.teamSlots = {...R5_TEAM};
+}
+
 savedState=toCode();
 render();
 
