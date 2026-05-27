@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Training Attendance — Coogee Seahorses</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0a1628; --navy-mid: #132040; --navy-light: #1e3260;
+    --teal: #00c9a7; --teal-dim: #00a085;
+    --white: #f5f7fa; --muted: #8a9ab8;
+    --border: rgba(255,255,255,0.08); --card: rgba(255,255,255,0.04);
+    --radius: 16px; --radius-sm: 10px;
+    --yes: #34c759; --no: #e25555; --injured: #f5a623; --unavail: #636366;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--navy); color: var(--white); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,201,167,0.1) 0%, transparent 60%); pointer-events: none; z-index: 0; }
+  .container { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; padding: 1.5rem 1rem 5rem; }
+
+  /* Header */
+  .header { text-align: center; margin-bottom: 1.75rem; }
+  .club-badge { display: inline-flex; align-items: center; justify-content: center; width: 52px; height: 52px; background: linear-gradient(135deg, var(--teal), var(--teal-dim)); border-radius: 50%; margin-bottom: 0.75rem; font-size: 24px; }
+  .header h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(1.8rem, 7vw, 2.6rem); letter-spacing: 0.04em; line-height: 1; margin-bottom: 0.3rem; }
+  .header h1 span { color: var(--teal); }
+  .header .subtitle { font-size: 13px; color: var(--muted); }
+
+  /* Session picker */
+  .session-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem; }
+  .session-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--teal); font-weight: 600; margin-bottom: 10px; }
+  .session-select { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 16px; padding: 12px 14px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a9ab8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; cursor: pointer; margin-bottom: 10px; }
+  .session-select option { background: var(--navy-mid); }
+  .session-select:focus { outline: none; border-color: var(--teal); }
+  .custom-date { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 15px; padding: 12px 14px; display: none; }
+  .custom-date:focus { outline: none; border-color: var(--teal); }
+
+  /* Progress bar */
+  .progress-wrap { margin-bottom: 1.25rem; }
+  .progress-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .progress-label { font-size: 12px; color: var(--muted); }
+  .progress-count { font-size: 13px; font-weight: 600; color: var(--teal); }
+  .progress-bar-bg { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; }
+  .progress-bar-fill { height: 4px; background: var(--teal); border-radius: 2px; transition: width 0.3s ease; }
+
+  /* Legend */
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 1rem; font-size: 12px; color: var(--muted); }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Player cards */
+  .players-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 1.5rem; }
+
+  .player-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; transition: border-color 0.2s; }
+  .player-card.marked { border-color: rgba(255,255,255,0.15); }
+  .player-card.status-yes    { border-color: rgba(52,199,89,0.4);   background: rgba(52,199,89,0.06); }
+  .player-card.status-no     { border-color: rgba(226,85,85,0.4);   background: rgba(226,85,85,0.06); }
+  .player-card.status-injured{ border-color: rgba(245,166,35,0.4);  background: rgba(245,166,35,0.06); }
+  .player-card.status-unavail{ border-color: rgba(99,99,102,0.4);   background: rgba(99,99,102,0.06); }
+
+  .player-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .player-name { flex: 1; font-weight: 600; font-size: 15px; }
+  .player-group { font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: 600; flex-shrink: 0; }
+  .group-fwd { background: rgba(0,122,255,0.15); color: #6eb0ff; }
+  .group-back { background: rgba(175,82,222,0.15); color: #c490f0; }
+
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+
+  .status-btn {
+    padding: 10px 4px; border: 1px solid var(--border); border-radius: 8px;
+    background: rgba(255,255,255,0.04); color: var(--muted);
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600;
+    cursor: pointer; text-align: center; transition: all 0.15s;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  .status-btn:active { transform: scale(0.96); }
+  .status-btn .btn-icon { font-size: 16px; line-height: 1; }
+
+  .status-btn.active-yes     { background: rgba(52,199,89,0.18);  border-color: var(--yes);    color: var(--yes); }
+  .status-btn.active-no      { background: rgba(226,85,85,0.18);  border-color: var(--no);     color: var(--no); }
+  .status-btn.active-injured { background: rgba(245,166,35,0.18); border-color: var(--injured);color: var(--injured); }
+  .status-btn.active-unavail { background: rgba(99,99,102,0.18);  border-color: var(--unavail);color: var(--unavail); }
+
+  /* Submit */
+  .submit-section { position: sticky; bottom: 0; padding: 1rem 0 0; background: linear-gradient(to top, var(--navy) 70%, transparent); }
+  .submit-btn { width: 100%; padding: 16px; background: linear-gradient(135deg, var(--teal), var(--teal-dim)); border: none; border-radius: var(--radius-sm); color: var(--navy); font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 0.06em; cursor: pointer; transition: all 0.2s; }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+  .submit-hint { font-size: 12px; color: var(--muted); text-align: center; margin-top: 8px; }
+
+  /* Success */
+  .success-screen { display: none; text-align: center; padding: 3rem 1rem; }
+  .success-icon { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, var(--teal), var(--teal-dim)); display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 1.5rem; }
+  .success-screen h2 { font-family: 'Bebas Neue', sans-serif; font-size: 2.5rem; margin-bottom: 0.5rem; }
+  .success-screen p { color: var(--muted); font-size: 15px; margin-bottom: 1.5rem; }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 1.5rem 0; }
+  .summary-stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; }
+  .summary-stat-val { font-size: 28px; font-weight: 700; }
+  .summary-stat-lbl { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .val-yes { color: var(--yes); } .val-no { color: var(--no); } .val-injured { color: var(--injured); } .val-unavail { color: var(--unavail); }
+  .new-session-btn { padding: 12px 28px; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; background: none; transition: all 0.2s; }
+  .new-session-btn:hover { border-color: var(--teal); color: var(--teal); }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1c1c1e; color: #fff; padding: 10px 22px; border-radius: 20px; font-size: 14px; opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 999; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="container">
+
+  <div class="header">
+    <div class="club-badge">📋</div>
+    <h1>Training <span>Attendance</span></h1>
+    <p class="subtitle">Coogee Seahorses JRUFC · Manager entry</p>
+  </div>
+
+  <!-- Session picker -->
+  <div class="session-card">
+    <div class="session-label">Training session</div>
+    <select class="session-select" id="session-select">
+      <option value="">Select session…</option>
+      <option value="2026-03-11">Wed 11 Mar 2026 — Session 1</option>
+      <option value="2026-03-18">Wed 18 Mar 2026 — Session 2</option>
+      <option value="2026-03-25">Wed 25 Mar 2026 — Session 3</option>
+      <option value="2026-04-01">Wed 1 Apr 2026 — Session 4</option>
+      <option value="2026-04-08">Wed 8 Apr 2026 — Session 5</option>
+      <option value="2026-04-15">Wed 15 Apr 2026 — Session 6</option>
+      <option value="2026-04-22">Wed 22 Apr 2026 — Session 7</option>
+      <option value="2026-04-29">Wed 29 Apr 2026 — Session 8</option>
+      <option value="2026-05-06">Wed 6 May 2026 — Session 9</option>
+      <option value="2026-05-13">Wed 13 May 2026 — Session 10</option>
+      <option value="2026-05-20">Wed 20 May 2026 — Session 11</option>
+      <option value="2026-05-27">Wed 27 May 2026 — Session 12</option>
+      <option value="2026-06-03">Wed 3 Jun 2026 — Session 13</option>
+      <option value="2026-06-10">Wed 10 Jun 2026 — Session 14</option>
+      <option value="2026-06-17">Wed 17 Jun 2026 — Session 15</option>
+      <option value="custom">Other date…</option>
+    </select>
+    <input type="date" class="custom-date" id="custom-date" placeholder="Select date">
+  </div>
+
+  <!-- Main form -->
+  <div id="main-form" style="display:none">
+
+    <div class="progress-wrap">
+      <div class="progress-header">
+        <span class="progress-label">Players marked</span>
+        <span class="progress-count" id="progress-count">0 / 26</span>
+      </div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-bar" style="width:0%"></div></div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--yes)"></div>Attended</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--no)"></div>Absent</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--injured)"></div>Injured</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--unavail)"></div>Unavailable</div>
+    </div>
+
+    <div class="players-list" id="players-list"></div>
+
+    <div class="submit-section">
+      <button class="submit-btn" id="submit-btn" disabled>Save Attendance</button>
+      <div class="submit-hint" id="submit-hint">Mark all players to submit</div>
+    </div>
+
+  </div>
+
+  <!-- Success screen -->
+  <div class="success-screen" id="success-screen">
+    <div class="success-icon">✅</div>
+    <h2>Attendance <span style="color:var(--teal)">Saved!</span></h2>
+    <p id="success-session-label"></p>
+    <div class="summary-grid">
+      <div class="summary-stat"><div class="summary-stat-val val-yes" id="sum-yes">0</div><div class="summary-stat-lbl">Attended</div></div>
+      <div class="summary-stat"><div class="summary-stat-val val-no" id="sum-no">0</div><div class="summary-stat-lbl">Absent</div></div>
+      <div class="summary-stat"><div class="summary-stat-val val-injured" id="sum-injured">0</div><div class="summary-stat-lbl">Injured</div></div>
+      <div class="summary-stat"><div class="summary-stat-val val-unavail" id="sum-unavail">0</div><div class="summary-stat-lbl">Unavailable</div></div>
+    </div>
+    <button class="new-session-btn" id="new-session-btn">Enter another session</button>
+  </div>
+
+</div>
+
+<script>
+  const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
+
+  // Players — alphabetical by first name, all squad members
+  const PLAYERS = [
+    { name:'Aiden Schultz',    group:'Back'    },
+    { name:'Archer Price',     group:'Back'    },
+    { name:'Beau Hack',        group:'Back'    },
+    { name:'Cade Forshaw',     group:'Back'    },
+    { name:'Edward Macassey',  group:'Back'    },
+    { name:'Elliot Dean',      group:'Forward' },
+    { name:'Freddie Kirrane',  group:'Back'    },
+    { name:'Henry Scott',      group:'Forward' },
+    { name:'Jackson Kendall',  group:'Forward' },
+    { name:'Kai Lianto',       group:'Forward' },
+    { name:'Kycen Puroku',     group:'Back'    },
+    { name:'Lachlan McDonald', group:'Back'    },
+    { name:'Max Boss',         group:'Back'    },
+    { name:'Michael Dunworth', group:'Forward' },
+    { name:'Nathan Evans',     group:'Back'    },
+    { name:'Oliver Worley',    group:'Back'    },
+    { name:'Patrick Keenen',   group:'Forward' },
+    { name:'Rafferty Moffitt', group:'Back'    },
+    { name:'Sasha Hayim',      group:'Back'    },
+    { name:'Teddy Russell',    group:'Forward' },
+    { name:'Theo Deichsel',    group:'Forward' },
+    { name:'Thomas Morgan',    group:'Back'    },
+    { name:'Watene Falemanu',  group:'Forward' },
+    { name:'William English',  group:'Forward' },
+    { name:'Xavier Reddy',     group:'Forward' },
+    { name:'Xavier Saunders',  group:'Back'    },
+  ];
+
+  const STATUS_OPTIONS = [
+    { value:'yes',      label:'Attended', icon:'✅', activeClass:'active-yes'     },
+    { value:'no',       label:'Absent',   icon:'❌', activeClass:'active-no'      },
+    { value:'injured',  label:'Injured',  icon:'🤕', activeClass:'active-injured' },
+    { value:'unavail',  label:'N/A',      icon:'⛔', activeClass:'active-unavail' },
+  ];
+
+  let attendance = {}; // { playerName: 'yes'|'no'|'injured'|'unavail' }
+  let sessionDate = null;
+  let sessionLabel = '';
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // Auto-select most recent past Wednesday
+  function getMostRecentWednesday() {
+    const today = new Date();
+    const day = today.getDay(); // 0=Sun, 3=Wed
+    const diff = (day >= 3) ? day - 3 : day + 4;
+    const wed = new Date(today); wed.setDate(today.getDate() - diff);
+    return wed.toISOString().split('T')[0];
+  }
+
+  const sessionSelect = document.getElementById('session-select');
+  const customDate = document.getElementById('custom-date');
+  const mostRecent = getMostRecentWednesday();
+
+  // Auto-select matching session if today is a Wednesday or find most recent
+  for (let i = 0; i < sessionSelect.options.length; i++) {
+    if (sessionSelect.options[i].value === mostRecent) {
+      sessionSelect.selectedIndex = i; break;
+    }
+  }
+
+  sessionSelect.addEventListener('change', () => {
+    if (sessionSelect.value === 'custom') {
+      customDate.style.display = 'block';
+      customDate.focus();
+    } else {
+      customDate.style.display = 'none';
+    }
+    updateSession();
+  });
+
+  customDate.addEventListener('change', updateSession);
+
+  function updateSession() {
+    const val = sessionSelect.value;
+    if (val === 'custom') {
+      sessionDate = customDate.value || null;
+      sessionLabel = customDate.value ? 'Custom: ' + customDate.value : '';
+    } else if (val) {
+      sessionDate = val;
+      sessionLabel = sessionSelect.options[sessionSelect.selectedIndex].text;
+    } else {
+      sessionDate = null; sessionLabel = '';
+    }
+    if (sessionDate) {
+      attendance = {};
+      document.getElementById('main-form').style.display = 'block';
+      buildPlayerList();
+    }
+  }
+
+  function buildPlayerList() {
+    const list = document.getElementById('players-list');
+    list.innerHTML = PLAYERS.map(p => `
+      <div class="player-card" id="card-${p.name.replace(/\s+/g,'_')}">
+        <div class="player-row">
+          <span class="player-name">${p.name}</span>
+          <span class="player-group ${p.group==='Forward'?'group-fwd':'group-back'}">${p.group}</span>
+        </div>
+        <div class="btn-row">
+          ${STATUS_OPTIONS.map(s => `
+            <button type="button" class="status-btn" data-player="${p.name}" data-status="${s.value}">
+              <span class="btn-icon">${s.icon}</span>
+              <span>${s.label}</span>
+            </button>`).join('')}
+        </div>
+      </div>`).join('');
+
+    document.querySelectorAll('.status-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const player = btn.dataset.player;
+        const status = btn.dataset.status;
+        attendance[player] = status;
+        // Update card style
+        const cardId = 'card-' + player.replace(/\s+/g,'_');
+        const card = document.getElementById(cardId);
+        card.className = 'player-card marked status-' + status;
+        // Update button states in this card
+        card.querySelectorAll('.status-btn').forEach(b => {
+          b.classList.remove('active-yes','active-no','active-injured','active-unavail');
+          if (b.dataset.status === status) {
+            b.classList.add('active-' + status);
+          }
+        });
+        updateProgress();
+      });
+    });
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const marked = Object.keys(attendance).length;
+    const total = PLAYERS.length;
+    document.getElementById('progress-count').textContent = marked + ' / ' + total;
+    document.getElementById('progress-bar').style.width = (marked / total * 100) + '%';
+    const submitBtn = document.getElementById('submit-btn');
+    const hint = document.getElementById('submit-hint');
+    if (marked === total) {
+      submitBtn.disabled = false;
+      hint.textContent = 'All players marked — ready to save';
+      hint.style.color = 'var(--teal)';
+    } else {
+      submitBtn.disabled = true;
+      hint.textContent = (total - marked) + ' player' + (total - marked !== 1 ? 's' : '') + ' still to mark';
+      hint.style.color = 'var(--muted)';
+    }
+  }
+
+  document.getElementById('submit-btn').addEventListener('click', async () => {
+    if (!sessionDate) { showToast('Please select a session date'); return; }
+    const btn = document.getElementById('submit-btn');
+    btn.textContent = 'Saving…'; btn.disabled = true;
+
+    const records = PLAYERS.map(p => ({
+      player: p.name,
+      status: attendance[p.name] || 'no',
+      group: p.group
+    }));
+
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action:'submitTraining', date:sessionDate, sessionLabel, records })
+      });
+      const data = await res.json();
+      if (data.success) {
+        showSuccess();
+      } else {
+        showToast('Error saving — check connection');
+        btn.textContent = 'Save Attendance'; btn.disabled = false;
+      }
+    } catch(e) {
+      console.warn('Apps Script unavailable, saving locally');
+      // Save locally as fallback
+      const local = JSON.parse(localStorage.getItem('seahorses_training') || '{}');
+      local[sessionDate] = records;
+      localStorage.setItem('seahorses_training', JSON.stringify(local));
+      showSuccess();
+    }
+  });
+
+  function showSuccess() {
+    const yes = Object.values(attendance).filter(v=>v==='yes').length;
+    const no  = Object.values(attendance).filter(v=>v==='no').length;
+    const inj = Object.values(attendance).filter(v=>v==='injured').length;
+    const una = Object.values(attendance).filter(v=>v==='unavail').length;
+    document.getElementById('sum-yes').textContent = yes;
+    document.getElementById('sum-no').textContent = no;
+    document.getElementById('sum-injured').textContent = inj;
+    document.getElementById('sum-unavail').textContent = una;
+    document.getElementById('success-session-label').textContent = sessionLabel;
+    document.getElementById('main-form').style.display = 'none';
+    document.querySelector('.session-card').style.display = 'none';
+    document.getElementById('success-screen').style.display = 'block';
+  }
+
+  document.getElementById('new-session-btn').addEventListener('click', () => {
+    attendance = {}; sessionDate = null; sessionLabel = '';
+    document.getElementById('success-screen').style.display = 'none';
+    document.querySelector('.session-card').style.display = 'block';
+    document.getElementById('main-form').style.display = 'none';
+    sessionSelect.selectedIndex = 0;
+    customDate.style.display = 'none';
+  });
+
+  // Trigger initial session load if auto-selected
+  if (sessionSelect.value) updateSession();
+</script>
+</body>
+</html>

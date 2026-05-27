@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match Stats — Coogee Seahorses</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0a1628; --navy-mid: #132040; --navy-light: #1e3260;
+    --teal: #00c9a7; --teal-dim: #00a085;
+    --white: #f5f7fa; --muted: #8a9ab8;
+    --border: rgba(255,255,255,0.08); --card: rgba(255,255,255,0.04);
+    --radius: 16px; --radius-sm: 10px;
+    --try: #34c759; --conv: #007aff; --pen: #f5a623; --pts: #00c9a7;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--navy); color: var(--white); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+  body::before { content:''; position:fixed; inset:0; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,201,167,0.1) 0%, transparent 60%); pointer-events:none; z-index:0; }
+  .container { position:relative; z-index:1; max-width:540px; margin:0 auto; padding:1.5rem 1rem 5rem; }
+
+  .header { text-align:center; margin-bottom:1.75rem; }
+  .club-badge { display:inline-flex; align-items:center; justify-content:center; width:52px; height:52px; background:linear-gradient(135deg, var(--teal), var(--teal-dim)); border-radius:50%; margin-bottom:0.75rem; font-size:24px; }
+  .header h1 { font-family:'Bebas Neue', sans-serif; font-size:clamp(1.8rem,7vw,2.6rem); letter-spacing:0.04em; line-height:1; margin-bottom:0.3rem; }
+  .header h1 span { color:var(--teal); }
+  .header .subtitle { font-size:13px; color:var(--muted); }
+
+  .section-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; margin-bottom:1.25rem; }
+  .section-label { font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--teal); font-weight:600; margin-bottom:10px; }
+
+  select, input[type=date] { width:100%; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--white); font-family:'DM Sans', sans-serif; font-size:15px; padding:12px 14px; appearance:none; -webkit-appearance:none; margin-bottom:10px; }
+  select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a9ab8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; }
+  select:focus, input:focus { outline:none; border-color:var(--teal); }
+  select option { background:var(--navy-mid); }
+  select:last-child, input:last-child { margin-bottom:0; }
+
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .field-label { font-size:12px; color:var(--muted); margin-bottom:4px; }
+
+  /* Screenshot upload */
+  .upload-area { border:2px dashed rgba(0,201,167,0.3); border-radius:var(--radius-sm); padding:1.5rem; text-align:center; cursor:pointer; transition:all 0.2s; position:relative; }
+  .upload-area:hover { border-color:var(--teal); background:rgba(0,201,167,0.04); }
+  .upload-area.has-image { border-color:var(--teal); border-style:solid; }
+  .upload-icon { font-size:32px; margin-bottom:8px; }
+  .upload-text { font-size:14px; color:var(--muted); }
+  .upload-text strong { color:var(--teal); }
+  .upload-input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .upload-preview { width:100%; border-radius:8px; max-height:200px; object-fit:contain; display:none; }
+  .analyze-btn { width:100%; margin-top:10px; padding:12px; background:linear-gradient(135deg, var(--teal), var(--teal-dim)); border:none; border-radius:var(--radius-sm); color:var(--navy); font-family:'Bebas Neue', sans-serif; font-size:1.1rem; letter-spacing:0.06em; cursor:pointer; transition:all 0.2s; display:none; }
+  .analyze-btn:active { transform:scale(0.98); }
+  .analyze-btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .analyze-status { font-size:13px; color:var(--muted); text-align:center; margin-top:8px; min-height:20px; }
+
+  /* Player stat rows */
+  .players-form { display:flex; flex-direction:column; gap:8px; margin-bottom:1.5rem; }
+  .player-stat-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; }
+  .player-stat-card.has-stats { border-color:rgba(0,201,167,0.3); background:rgba(0,201,167,0.04); }
+  .psc-header { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .psc-name { flex:1; font-weight:600; font-size:14px; }
+  .psc-group { font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; }
+  .grp-fwd { background:rgba(0,122,255,0.15); color:#6eb0ff; }
+  .grp-back { background:rgba(175,82,222,0.15); color:#c490f0; }
+  .psc-points { font-size:12px; font-weight:700; color:var(--teal); background:rgba(0,201,167,0.12); padding:2px 10px; border-radius:10px; }
+
+  .stat-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .stat-field { text-align:center; }
+  .stat-field-label { font-size:10px; color:var(--muted); margin-bottom:5px; letter-spacing:0.04em; }
+  .stat-stepper { display:flex; align-items:center; justify-content:center; gap:0; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .step-btn { width:36px; height:36px; border:none; background:transparent; color:var(--muted); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; -webkit-tap-highlight-color:transparent; transition:background 0.15s; flex-shrink:0; }
+  .step-btn:active { background:rgba(255,255,255,0.1); }
+  .step-val { font-size:17px; font-weight:700; min-width:28px; text-align:center; color:var(--white); }
+  .step-val.nonzero-try  { color:var(--try); }
+  .step-val.nonzero-conv { color:var(--conv); }
+  .step-val.nonzero-pen  { color:var(--pen); }
+  .step-val.nonzero-miss { color:#e25555; }
+
+  .stat-legend { display:flex; gap:14px; flex-wrap:wrap; font-size:11px; color:var(--muted); margin-bottom:1rem; }
+  .stat-legend span { display:flex; align-items:center; gap:4px; }
+  .dot { width:8px; height:8px; border-radius:50%; }
+
+  /* Summary totals */
+  .totals-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:1.5rem; }
+  .total-stat { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 8px; text-align:center; }
+  .total-val { font-size:22px; font-weight:700; }
+  .total-lbl { font-size:10px; color:var(--muted); margin-top:3px; }
+  .val-try { color:var(--try); } .val-conv { color:var(--conv); } .val-pen { color:var(--pen); } .val-pts { color:var(--pts); }
+
+  /* Submit */
+  .submit-section { position:sticky; bottom:0; padding:1rem 0 0; background:linear-gradient(to top, var(--navy) 70%, transparent); }
+  .submit-btn { width:100%; padding:16px; background:linear-gradient(135deg, var(--teal), var(--teal-dim)); border:none; border-radius:var(--radius-sm); color:var(--navy); font-family:'Bebas Neue', sans-serif; font-size:1.4rem; letter-spacing:0.06em; cursor:pointer; transition:all 0.2s; }
+  .submit-btn:active { transform:scale(0.98); }
+  .submit-btn:disabled { opacity:0.35; cursor:not-allowed; }
+
+  /* Success */
+  .success-screen { display:none; text-align:center; padding:3rem 1rem; }
+  .success-icon { width:80px; height:80px; border-radius:50%; background:linear-gradient(135deg, var(--teal), var(--teal-dim)); display:flex; align-items:center; justify-content:center; font-size:36px; margin:0 auto 1.5rem; }
+  .success-screen h2 { font-family:'Bebas Neue', sans-serif; font-size:2.5rem; margin-bottom:0.5rem; }
+  .success-screen p { color:var(--muted); font-size:15px; margin-bottom:1.5rem; }
+  .another-btn { padding:12px 28px; border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--muted); font-family:'DM Sans', sans-serif; font-size:14px; cursor:pointer; background:none; transition:all 0.2s; }
+  .another-btn:hover { border-color:var(--teal); color:var(--teal); }
+
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1c1c1e; color:#fff; padding:10px 22px; border-radius:20px; font-size:14px; opacity:0; transition:opacity 0.25s; pointer-events:none; z-index:999; white-space:nowrap; }
+  .toast.show { opacity:1; }
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="container">
+
+  <div class="header">
+    <div class="club-badge">🏆</div>
+    <h1>Match <span>Stats</span></h1>
+    <p class="subtitle">Coogee Seahorses JRUFC · Manager entry</p>
+  </div>
+
+  <div id="main-form">
+
+    <!-- Match selector -->
+    <div class="section-card">
+      <div class="section-label">Match details</div>
+      <div class="grid-2">
+        <div>
+          <div class="field-label">Team</div>
+          <select id="team-select">
+            <option value="seahorses">Coogee 11 (Friday)</option>
+            <option value="barbarians">Coogee Barbarians 11 (Sunday)</option>
+          </select>
+        </div>
+        <div>
+          <div class="field-label">Round</div>
+          <select id="round-select">
+            <option value="">Select round…</option>
+          </select>
+        </div>
+      </div>
+      <div id="match-info" style="font-size:13px;color:var(--muted);margin-top:4px;min-height:18px"></div>
+    </div>
+
+    <!-- Screenshot upload -->
+    <div class="section-card">
+      <div class="section-label">Rugby Xplorer screenshot (optional)</div>
+      <div class="upload-area" id="upload-area">
+        <input type="file" class="upload-input" id="screenshot-input" accept="image/*">
+        <div id="upload-prompt">
+          <div class="upload-icon">📸</div>
+          <div class="upload-text"><strong>Tap to upload</strong> a Rugby Xplorer screenshot<br>Stats will be pre-filled automatically</div>
+        </div>
+        <img class="upload-preview" id="upload-preview" alt="Screenshot preview">
+      </div>
+      <button class="analyze-btn" id="analyze-btn">🔍 Analyse Screenshot</button>
+      <div class="analyze-status" id="analyze-status"></div>
+    </div>
+
+    <!-- Stat legend -->
+    <div class="stat-legend">
+      <span><div class="dot" style="background:var(--try)"></div>Tries (5pts)</span>
+      <span><div class="dot" style="background:var(--conv)"></div>Conv made (2pts)</span>
+      <span><div class="dot" style="background:#e25555"></div>Conv missed</span>
+      <span><div class="dot" style="background:var(--pen)"></div>Penalties (3pts)</span>
+    </div>
+
+    <!-- Running totals -->
+    <div class="totals-grid">
+      <div class="total-stat"><div class="total-val val-try" id="tot-tries">0</div><div class="total-lbl">Tries</div></div>
+      <div class="total-stat"><div class="total-val val-conv" id="tot-conv">0</div><div class="total-lbl">Conversions</div></div>
+      <div class="total-stat"><div class="total-val val-pen" id="tot-pen">0</div><div class="total-lbl">Penalties</div></div>
+      <div class="total-stat"><div class="total-val val-pts" id="tot-pts">0</div><div class="total-lbl">Total pts</div></div>
+    </div>
+
+    <!-- Player rows -->
+    <div class="players-form" id="players-form"></div>
+
+    <div class="submit-section">
+      <button class="submit-btn" id="submit-btn">Save Match Stats</button>
+    </div>
+
+  </div>
+
+  <!-- Success -->
+  <div class="success-screen" id="success-screen">
+    <div class="success-icon">🏆</div>
+    <h2>Stats <span style="color:var(--teal)">Saved!</span></h2>
+    <p id="success-label"></p>
+    <div class="totals-grid" style="max-width:320px;margin:1.5rem auto">
+      <div class="total-stat"><div class="total-val val-try" id="s-tries">0</div><div class="total-lbl">Tries</div></div>
+      <div class="total-stat"><div class="total-val val-conv" id="s-conv">0</div><div class="total-lbl">Conv</div></div>
+      <div class="total-stat"><div class="total-val val-pen" id="s-pen">0</div><div class="total-lbl">Pen</div></div>
+      <div class="total-stat"><div class="total-val val-pts" id="s-pts">0</div><div class="total-lbl">Points</div></div>
+    </div>
+    <button class="another-btn" id="another-btn">Enter another match</button>
+  </div>
+
+</div>
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
+
+const FIXTURES = {
+  seahorses: [
+    { round:1, date:'Fri 24 Apr', isoDate:'2026-04-24', opponent:'Burraneer Gold',        result:'L 41–12' },
+    { round:2, date:'Fri 1 May',  isoDate:'2026-05-01', opponent:'Clovelly Eagles Blue',  result:'W 36–12' },
+    { round:3, date:'Fri 8 May',  isoDate:'2026-05-08', opponent:'Rockdale',              result:'' },
+    { round:4, date:'Fri 15 May', isoDate:'2026-05-15', opponent:'Burraneer Blue',        result:'W 31–19' },
+    { round:5, date:'Fri 22 May', isoDate:'2026-05-22', opponent:'Maroubra Missiles',     result:'' },
+    { round:6, date:'Fri 29 May', isoDate:'2026-05-29', opponent:'Oatley',                result:'' },
+    { round:7, date:'Fri 12 Jun', isoDate:'2026-06-12', opponent:'Clovelly Eagles White', result:'' },
+    { round:8, date:'Fri 19 Jun', isoDate:'2026-06-19', opponent:'TBC',                   result:'' },
+  ],
+  barbarians: [
+    { round:1, date:'Sun 26 Apr', isoDate:'2026-04-26', opponent:'Hunters Hill Black',    result:'W 26–5' },
+    { round:2, date:'Sun 3 May',  isoDate:'2026-05-03', opponent:'Norths Pirates',        result:'L 14–29' },
+    { round:3, date:'Sun 10 May', isoDate:'2026-05-10', opponent:'Wakehurst',             result:'D 26–26' },
+    { round:4, date:'Sun 17 May', isoDate:'2026-05-17', opponent:'Wahroonga Gold',        result:'W 36–7' },
+    { round:5, date:'Sun 24 May', isoDate:'2026-05-24', opponent:'Mosman Dolphins',       result:'W 43–5' },
+    { round:6, date:'Sun 31 May', isoDate:'2026-05-31', opponent:'Hornsby Lions',         result:'' },
+  ]
+};
+
+// All players alphabetical
+const PLAYERS = [
+  {name:'Aiden Schultz',    group:'Back'},    {name:'Archer Price',     group:'Back'},
+  {name:'Beau Hack',        group:'Back'},    {name:'Cade Forshaw',     group:'Back'},
+  {name:'Edward Macassey',  group:'Back'},    {name:'Elliot Dean',      group:'Forward'},
+  {name:'Freddie Kirrane',  group:'Back'},    {name:'Henry Scott',      group:'Forward'},
+  {name:'Jackson Kendall',  group:'Forward'}, {name:'Kai Lianto',       group:'Forward'},
+  {name:'Kycen Puroku',     group:'Back'},    {name:'Lachlan McDonald', group:'Back'},
+  {name:'Max Boss',         group:'Back'},    {name:'Michael Dunworth', group:'Forward'},
+  {name:'Nathan Evans',     group:'Back'},    {name:'Oliver Worley',    group:'Back'},
+  {name:'Patrick Keenen',   group:'Forward'}, {name:'Rafferty Moffitt', group:'Back'},
+  {name:'Sasha Hayim',      group:'Back'},    {name:'Teddy Russell',    group:'Forward'},
+  {name:'Theo Deichsel',    group:'Forward'}, {name:'Thomas Morgan',    group:'Back'},
+  {name:'Watene Falemanu',  group:'Forward'}, {name:'William English',  group:'Forward'},
+  {name:'Xavier Reddy',     group:'Forward'}, {name:'Xavier Saunders',  group:'Back'},
+];
+
+// stats[playerName] = { tries, convMade, convMissed, penalties }
+let stats = {};
+PLAYERS.forEach(p => { stats[p.name] = { tries:0, convMade:0, convMissed:0, penalties:0 }; });
+
+let currentTeam = 'seahorses';
+let currentRound = null;
+let screenshotBase64 = null;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function calcPoints(s) {
+  return s.tries * 5 + s.convMade * 2 + s.penalties * 3;
+}
+
+function updateTotals() {
+  let tries=0, conv=0, pen=0;
+  Object.values(stats).forEach(s => { tries+=s.tries; conv+=s.convMade; pen+=s.penalties; });
+  document.getElementById('tot-tries').textContent = tries;
+  document.getElementById('tot-conv').textContent = conv;
+  document.getElementById('tot-pen').textContent = pen;
+  document.getElementById('tot-pts').textContent = tries*5 + conv*2 + pen*3;
+}
+
+function buildPlayerForm() {
+  const form = document.getElementById('players-form');
+  form.innerHTML = PLAYERS.map(p => {
+    const s = stats[p.name];
+    const pts = calcPoints(s);
+    return `
+    <div class="player-stat-card ${pts>0||s.tries>0||s.convMade>0||s.convMissed>0||s.penalties>0?'has-stats':''}" id="psc-${p.name.replace(/\s+/g,'_')}">
+      <div class="psc-header">
+        <span class="psc-name">${p.name}</span>
+        <span class="psc-group ${p.group==='Forward'?'grp-fwd':'grp-back'}">${p.group}</span>
+        <span class="psc-points" id="pts-${p.name.replace(/\s+/g,'_')}" style="${pts===0?'opacity:0.3':''}">
+          ${pts}pts
+        </span>
+      </div>
+      <div class="stat-row">
+        ${buildStepper(p.name, 'tries',     'Tries',      'try')}
+        ${buildStepper(p.name, 'convMade',  'Conv ✓',     'conv')}
+        ${buildStepper(p.name, 'convMissed','Conv ✗',     'miss')}
+        </div>
+      <div class="stat-row" style="margin-top:6px;grid-template-columns:1fr 1fr 1fr">
+        ${buildStepper(p.name, 'penalties', 'Penalty',    'pen')}
+        <div></div><div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Attach stepper events
+  form.querySelectorAll('.step-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const player = btn.dataset.player;
+      const field  = btn.dataset.field;
+      const dir    = parseInt(btn.dataset.dir);
+      stats[player][field] = Math.max(0, Math.min(15, stats[player][field] + dir));
+      updatePlayerCard(player);
+      updateTotals();
+    });
+  });
+}
+
+function buildStepper(player, field, label, colorClass) {
+  const val = stats[player][field];
+  return `
+    <div class="stat-field">
+      <div class="stat-field-label">${label}</div>
+      <div class="stat-stepper">
+        <button class="step-btn" data-player="${player}" data-field="${field}" data-dir="-1">−</button>
+        <span class="step-val ${val>0?'nonzero-'+colorClass:''}" id="sv-${player.replace(/\s+/g,'_')}-${field}">${val}</span>
+        <button class="step-btn" data-player="${player}" data-field="${field}" data-dir="1">+</button>
+      </div>
+    </div>`;
+}
+
+function updatePlayerCard(playerName) {
+  const s = stats[playerName];
+  const pts = calcPoints(s);
+  const key = playerName.replace(/\s+/g,'_');
+  const card = document.getElementById('psc-'+key);
+  card.className = 'player-stat-card ' + (pts>0||s.convMissed>0?'has-stats':'');
+
+  const ptsEl = document.getElementById('pts-'+key);
+  ptsEl.textContent = pts+'pts';
+  ptsEl.style.opacity = pts===0?'0.3':'1';
+
+  const fields = ['tries','convMade','convMissed','penalties'];
+  const colors = ['try','conv','miss','pen'];
+  fields.forEach((f,i) => {
+    const el = document.getElementById(`sv-${key}-${f}`);
+    if (el) {
+      el.textContent = s[f];
+      el.className = 'step-val ' + (s[f]>0?'nonzero-'+colors[i]:'');
+    }
+  });
+}
+
+// Round selector
+function populateRounds() {
+  const sel = document.getElementById('round-select');
+  const fixtures = FIXTURES[currentTeam];
+  sel.innerHTML = '<option value="">Select round…</option>' +
+    fixtures.map(f => `<option value="${f.round}">Round ${f.round} — ${f.opponent} (${f.date})${f.result?' · '+f.result:''}</option>`).join('');
+  // Auto-select most recent played round
+  const played = fixtures.filter(f => f.result);
+  if (played.length) sel.value = played[played.length-1].round;
+  updateMatchInfo();
+}
+
+function updateMatchInfo() {
+  const fixtures = FIXTURES[currentTeam];
+  const round = parseInt(document.getElementById('round-select').value);
+  currentRound = round || null;
+  const f = fixtures.find(x => x.round === round);
+  const info = document.getElementById('match-info');
+  info.textContent = f ? `${f.date} · vs ${f.opponent}${f.result?' · '+f.result:''}` : '';
+}
+
+document.getElementById('team-select').addEventListener('change', e => {
+  currentTeam = e.target.value; populateRounds();
+});
+document.getElementById('round-select').addEventListener('change', updateMatchInfo);
+
+// Screenshot upload
+const screenshotInput = document.getElementById('screenshot-input');
+const uploadPreview   = document.getElementById('upload-preview');
+const uploadPrompt    = document.getElementById('upload-prompt');
+const analyzeBtn      = document.getElementById('analyze-btn');
+const analyzeStatus   = document.getElementById('analyze-status');
+
+screenshotInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const dataUrl = ev.target.result;
+    screenshotBase64 = dataUrl.split(',')[1];
+    uploadPreview.src = dataUrl;
+    uploadPreview.style.display = 'block';
+    uploadPrompt.style.display = 'none';
+    document.getElementById('upload-area').classList.add('has-image');
+    analyzeBtn.style.display = 'block';
+    analyzeStatus.textContent = 'Screenshot ready — tap Analyse to extract stats';
+  };
+  reader.readAsDataURL(file);
+});
+
+analyzeBtn.addEventListener('click', async () => {
+  if (!screenshotBase64) return;
+  analyzeBtn.disabled = true;
+  analyzeBtn.textContent = '⏳ Analysing…';
+  analyzeStatus.textContent = 'Sending to AI for analysis…';
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'analyzeScreenshot',
+        imageBase64: screenshotBase64,
+        team: currentTeam === 'seahorses' ? 'Coogee 11' : 'Coogee Barbarians 11'
+      })
+    });
+    const data = await res.json();
+    if (data.success && data.stats) {
+      applyExtractedStats(data.stats);
+      analyzeStatus.textContent = `✅ Stats extracted — ${data.message || 'review and adjust below'}`;
+    } else {
+      analyzeStatus.textContent = '⚠️ Could not extract stats — enter manually below';
+    }
+  } catch(e) {
+    analyzeStatus.textContent = '⚠️ Analysis failed — enter stats manually';
+  }
+  analyzeBtn.disabled = false;
+  analyzeBtn.textContent = '🔍 Re-analyse Screenshot';
+});
+
+function applyExtractedStats(extracted) {
+  // extracted: { tries:[{player,team}], conversions:[{player,made,team}], penalties:[{player,team}] }
+  // Reset all first
+  PLAYERS.forEach(p => { stats[p.name] = { tries:0, convMade:0, convMissed:0, penalties:0 }; });
+
+  const ourTeam = currentTeam === 'seahorses' ? 'Coogee 11' : 'Coogee Barbarians 11';
+
+  (extracted.tries || []).forEach(t => {
+    if (t.team === ourTeam || !t.team) {
+      const p = findPlayer(t.player);
+      if (p) stats[p].tries++;
+    }
+  });
+  (extracted.conversions || []).forEach(c => {
+    if (c.team === ourTeam || !c.team) {
+      const p = findPlayer(c.player);
+      if (p) { if (c.made) stats[p].convMade++; else stats[p].convMissed++; }
+    }
+  });
+  (extracted.penalties || []).forEach(pen => {
+    if (pen.team === ourTeam || !pen.team) {
+      const p = findPlayer(pen.player);
+      if (p) stats[p].penalties++;
+    }
+  });
+
+  buildPlayerForm();
+  updateTotals();
+  showToast('Stats pre-filled from screenshot');
+}
+
+function findPlayer(name) {
+  if (!name) return null;
+  const lower = name.toLowerCase();
+  const match = PLAYERS.find(p => p.name.toLowerCase().includes(lower) || lower.includes(p.name.split(' ')[0].toLowerCase()));
+  return match ? match.name : null;
+}
+
+// Submit
+document.getElementById('submit-btn').addEventListener('click', async () => {
+  if (!currentRound) { showToast('Please select a round'); return; }
+  const btn = document.getElementById('submit-btn');
+  btn.textContent = 'Saving…'; btn.disabled = true;
+
+  const fixture = FIXTURES[currentTeam].find(f => f.round === currentRound);
+  const records = PLAYERS
+    .filter(p => { const s = stats[p.name]; return s.tries||s.convMade||s.convMissed||s.penalties; })
+    .map(p => ({ player:p.name, group:p.group, ...stats[p.name] }));
+
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'submitMatchStats',
+        round: currentRound,
+        team: currentTeam === 'seahorses' ? 'Coogee 11' : 'Coogee Barbarians 11',
+        date: fixture ? fixture.isoDate : '',
+        opponent: fixture ? fixture.opponent : '',
+        records,
+        screenshotBase64: screenshotBase64 || null
+      })
+    });
+    const data = await res.json();
+    if (data.success) showSuccess(fixture, records);
+    else { showToast('Save failed — try again'); btn.textContent='Save Match Stats'; btn.disabled=false; }
+  } catch(e) {
+    showToast('Connection error — saved locally');
+    const local = JSON.parse(localStorage.getItem('seahorses_matchstats') || '[]');
+    local.push({ round:currentRound, team:currentTeam, records, date:new Date().toISOString() });
+    localStorage.setItem('seahorses_matchstats', JSON.stringify(local));
+    showSuccess(fixture, records);
+  }
+});
+
+function showSuccess(fixture, records) {
+  let tries=0,conv=0,pen=0;
+  records.forEach(r => { tries+=r.tries; conv+=r.convMade; pen+=r.penalties; });
+  document.getElementById('s-tries').textContent = tries;
+  document.getElementById('s-conv').textContent  = conv;
+  document.getElementById('s-pen').textContent   = pen;
+  document.getElementById('s-pts').textContent   = tries*5+conv*2+pen*3;
+  document.getElementById('success-label').textContent =
+    fixture ? `Round ${fixture.round} · vs ${fixture.opponent}` : `Round ${currentRound}`;
+  document.getElementById('main-form').style.display = 'none';
+  document.getElementById('success-screen').style.display = 'block';
+}
+
+document.getElementById('another-btn').addEventListener('click', () => {
+  PLAYERS.forEach(p => { stats[p.name] = {tries:0,convMade:0,convMissed:0,penalties:0}; });
+  screenshotBase64 = null;
+  uploadPreview.style.display = 'none';
+  uploadPrompt.style.display = 'block';
+  document.getElementById('upload-area').classList.remove('has-image');
+  analyzeBtn.style.display = 'none';
+  analyzeStatus.textContent = '';
+  document.getElementById('success-screen').style.display = 'none';
+  document.getElementById('main-form').style.display = 'block';
+  buildPlayerForm(); updateTotals();
+});
+
+// Init
+populateRounds();
+buildPlayerForm();
+</script>
+</body>
+</html>
