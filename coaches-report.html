@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coaches Report — Coogee Seahorses</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0a1628; --navy-mid: #132040; --navy-light: #1e3260;
+    --teal: #00c9a7; --teal-dim: #00a085;
+    --red: #ff3b30; --orange: #ff9500; --green: #34c759; --blue: #007aff; --purple: #af52de;
+    --white: #f5f7fa; --muted: #8a9ab8;
+    --border: rgba(255,255,255,0.08); --card: rgba(255,255,255,0.04);
+    --radius: 16px; --radius-sm: 10px;
+  }
+  html { scroll-behavior: smooth; }
+  body { background: var(--navy); color: var(--white); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+  body::before { content:''; position:fixed; inset:0; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255,59,48,0.08) 0%, transparent 60%); pointer-events:none; z-index:0; }
+
+  /* ── PIN Screen ── */
+  .pin-screen { position:fixed; inset:0; background:var(--navy); z-index:100; display:flex; align-items:center; justify-content:center; flex-direction:column; padding:2rem; }
+  .pin-badge { width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg,#ff3b30,#c0392b); display:flex; align-items:center; justify-content:center; font-size:32px; margin-bottom:1.5rem; box-shadow:0 8px 32px rgba(255,59,48,0.3); }
+  .pin-title { font-family:'Bebas Neue',sans-serif; font-size:2.4rem; letter-spacing:0.05em; margin-bottom:0.4rem; }
+  .pin-subtitle { font-size:14px; color:var(--muted); margin-bottom:2.5rem; }
+  .pin-dots { display:flex; gap:14px; margin-bottom:2rem; }
+  .pin-dot { width:16px; height:16px; border-radius:50%; border:2px solid rgba(255,255,255,0.2); transition:all 0.15s; }
+  .pin-dot.filled { background:var(--teal); border-color:var(--teal); }
+  .pin-dot.error { background:var(--red); border-color:var(--red); }
+  .pin-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; max-width:280px; width:100%; }
+  .pin-btn { aspect-ratio:1; border-radius:50%; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.06); color:var(--white); font-family:'DM Sans',sans-serif; font-size:22px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.15s; -webkit-tap-highlight-color:transparent; }
+  .pin-btn:active { background:rgba(0,201,167,0.2); border-color:var(--teal); transform:scale(0.95); }
+  .pin-btn.del { font-size:18px; color:var(--muted); }
+  .pin-error { font-size:13px; color:var(--red); margin-top:0.75rem; min-height:20px; text-align:center; }
+
+  /* ── Main layout ── */
+  .container { position:relative; z-index:1; max-width:600px; margin:0 auto; padding:1.5rem 1rem 5rem; display:none; }
+
+  .header { text-align:center; margin-bottom:1.75rem; }
+  .header-badge { display:inline-flex; align-items:center; justify-content:center; width:52px; height:52px; background:linear-gradient(135deg,var(--red),#c0392b); border-radius:50%; margin-bottom:0.75rem; font-size:24px; }
+  .header h1 { font-family:'Bebas Neue',sans-serif; font-size:clamp(1.8rem,7vw,2.6rem); letter-spacing:0.04em; line-height:1; margin-bottom:0.3rem; }
+  .header h1 span { color:var(--red); }
+  .header .subtitle { font-size:13px; color:var(--muted); }
+  .lock-btn { font-size:12px; color:var(--muted); background:none; border:1px solid var(--border); border-radius:20px; padding:4px 12px; cursor:pointer; margin-top:8px; }
+
+  /* ── Tabs ── */
+  .tabs { display:flex; background:rgba(255,255,255,0.04); border-radius:12px; padding:3px; gap:2px; margin-bottom:1.5rem; }
+  .tab-btn { flex:1; padding:9px 4px; font-size:12px; font-weight:600; cursor:pointer; border:none; background:none; color:var(--muted); border-radius:9px; transition:all 0.15s; font-family:'DM Sans',sans-serif; }
+  .tab-btn.active { background:rgba(255,59,48,0.15); color:var(--red); }
+
+  /* ── Season summary cards ── */
+  .summary-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-bottom:1.5rem; }
+  .summary-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; }
+  .summary-card-label { font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-bottom:8px; }
+  .summary-row { display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:3px 0; }
+  .summary-key { color:var(--muted); }
+  .summary-val { font-weight:600; }
+  .pill { font-size:11px; padding:2px 8px; border-radius:6px; font-weight:700; }
+  .pill-w { background:rgba(52,199,89,0.15); color:var(--green); }
+  .pill-l { background:rgba(255,59,48,0.15); color:var(--red); }
+  .pill-d { background:rgba(255,149,0,0.15); color:var(--orange); }
+
+  /* ── Section label ── */
+  .section-label { font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:var(--red); font-weight:600; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── Player stat cards ── */
+  .player-report-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; margin-bottom:10px; transition:border-color 0.2s; }
+  .player-report-card:hover { border-color:rgba(255,59,48,0.3); }
+  .prc-header { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .prc-jersey { font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); padding:2px 8px; border-radius:6px; min-width:32px; text-align:center; }
+  .prc-name { flex:1; font-weight:600; font-size:15px; }
+  .prc-group { font-size:11px; padding:2px 8px; border-radius:6px; font-weight:600; }
+  .grp-fwd { background:rgba(0,122,255,0.15); color:#6eb0ff; }
+  .grp-back { background:rgba(175,82,222,0.15); color:#c490f0; }
+  .prc-pts { font-size:13px; font-weight:700; color:var(--teal); }
+
+  .stat-blocks { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:8px; }
+  .stat-block { background:rgba(255,255,255,0.03); border-radius:8px; padding:8px 6px; text-align:center; }
+  .sb-val { font-size:20px; font-weight:700; }
+  .sb-lbl { font-size:9px; color:var(--muted); margin-top:2px; letter-spacing:0.03em; }
+
+  .prc-bars { display:flex; flex-direction:column; gap:6px; }
+  .prc-bar-row { display:flex; align-items:center; gap:8px; font-size:12px; }
+  .prc-bar-label { width:120px; color:var(--muted); flex-shrink:0; }
+  .prc-bar-bg { flex:1; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
+  .prc-bar-fill { height:6px; border-radius:3px; transition:width 0.5s ease; }
+  .prc-bar-pct { width:36px; text-align:right; font-weight:600; flex-shrink:0; }
+
+  /* Scoring detail */
+  .scoring-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:6px; }
+  .scoring-chip { font-size:11px; padding:3px 10px; border-radius:10px; font-weight:600; }
+  .chip-try  { background:rgba(52,199,89,0.15); color:var(--green); }
+  .chip-conv { background:rgba(0,122,255,0.15); color:var(--blue); }
+  .chip-pen  { background:rgba(255,149,0,0.15); color:var(--orange); }
+  .chip-miss { background:rgba(255,59,48,0.12); color:var(--red); }
+
+  /* Training section */
+  .training-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:8px; margin-bottom:1.5rem; }
+  .training-player-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px; }
+  .tpc-name { font-weight:600; font-size:13px; margin-bottom:6px; }
+  .tpc-sessions { display:flex; gap:3px; flex-wrap:wrap; margin-bottom:6px; }
+  .session-dot { width:14px; height:14px; border-radius:3px; }
+  .dot-yes { background:var(--green); }
+  .dot-no { background:rgba(255,59,48,0.4); }
+  .dot-injured { background:var(--orange); }
+  .dot-unavail { background:rgba(99,99,102,0.5); }
+  .dot-unknown { background:rgba(255,255,255,0.1); }
+  .tpc-pct { font-size:12px; font-weight:700; }
+
+  /* Sort/filter bar */
+  .filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem; align-items:center; }
+  .filter-label { font-size:12px; color:var(--muted); }
+  .filter-btn { font-size:12px; padding:5px 12px; border-radius:20px; border:1px solid var(--border); background:none; color:var(--muted); cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+  .filter-btn.active { border-color:var(--red); color:var(--red); background:rgba(255,59,48,0.08); }
+
+  /* Sync bar */
+  .sync-bar { display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:8px 12px; margin-bottom:1.25rem; font-size:12px; color:var(--muted); }
+  .sync-dot { width:7px; height:7px; border-radius:50%; background:var(--green); flex-shrink:0; }
+  .sync-btn { margin-left:auto; padding:5px 12px; border:1px solid var(--border); border-radius:8px; background:none; color:var(--muted); font-size:11px; cursor:pointer; font-family:'DM Sans',sans-serif; transition:all 0.15s; }
+  .sync-btn:hover { border-color:var(--teal); color:var(--teal); }
+
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1c1c1e; color:#fff; padding:10px 22px; border-radius:20px; font-size:14px; opacity:0; transition:opacity 0.25s; pointer-events:none; z-index:999; white-space:nowrap; }
+  .toast.show { opacity:1; }
+  .loading { text-align:center; padding:3rem; color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+
+<!-- PIN Screen -->
+<div class="pin-screen" id="pin-screen">
+  <div class="pin-badge">📊</div>
+  <div class="pin-title">Coaches Report</div>
+  <div class="pin-subtitle">Coogee Seahorses JRUFC · Manager access only</div>
+  <div class="pin-dots">
+    <div class="pin-dot" id="d0"></div>
+    <div class="pin-dot" id="d1"></div>
+    <div class="pin-dot" id="d2"></div>
+    <div class="pin-dot" id="d3"></div>
+  </div>
+  <div class="pin-pad">
+    <button class="pin-btn" data-n="1">1</button>
+    <button class="pin-btn" data-n="2">2</button>
+    <button class="pin-btn" data-n="3">3</button>
+    <button class="pin-btn" data-n="4">4</button>
+    <button class="pin-btn" data-n="5">5</button>
+    <button class="pin-btn" data-n="6">6</button>
+    <button class="pin-btn" data-n="7">7</button>
+    <button class="pin-btn" data-n="8">8</button>
+    <button class="pin-btn" data-n="9">9</button>
+    <div></div>
+    <button class="pin-btn" data-n="0">0</button>
+    <button class="pin-btn del" id="pin-del">⌫</button>
+  </div>
+  <div class="pin-error" id="pin-error"></div>
+</div>
+
+<!-- Main report -->
+<div class="container" id="main-container">
+  <div class="header">
+    <div class="header-badge">📊</div>
+    <h1>Coaches <span>Report</span></h1>
+    <p class="subtitle">Coogee Seahorses JRUFC · 2026 Season</p>
+    <button class="lock-btn" id="lock-btn">🔒 Lock</button>
+  </div>
+
+  <div class="sync-bar">
+    <div class="sync-dot" id="sync-dot"></div>
+    <span id="sync-label">Loading data…</span>
+    <button class="sync-btn" id="sync-btn">↻ Refresh</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="players">Players</button>
+    <button class="tab-btn" data-tab="training">Training</button>
+    <button class="tab-btn" data-tab="season">Season</button>
+  </div>
+
+  <div id="tab-content"><div class="loading">Loading…</div></div>
+</div>
+
+<script>
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
+const PIN = '0000';
+
+// ── Historical squad data (from team-manager source of truth) ─────────────────
+const SQUAD = [
+  {name:'Rafferty Moffitt', jersey:14, group:'Back',    p1:'Right Wing',
+    friS:['Unavailable','Unavailable','Started','Started'], sunS:['N.R.','Started','Started','Started'],
+    fri:['Out','Out','In','In'], sun:['N.R.','In','In','In'], tr:['Yes','No','No','Yes','Yes','Yes','Yes','Yes']},
+  {name:'Theo Deichsel',    jersey:23, group:'Forward', p1:'Tight Head Prop',
+    friS:['Started','Started','Started','Started'], sunS:['Started','Unavailable','Started','Started'],
+    fri:['In','In','In','In'], sun:['In','Out','In','In'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes','Yes']},
+  {name:'William English',  jersey:4,  group:'Forward', p1:'Left Lock',
+    friS:['Unavailable','Started','Started','Started'], sunS:['Started','Started','Started','Started'],
+    fri:['Out','In','In','In'], sun:['In','In','In','In'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes','Yes']},
+  {name:'Archer Price',     jersey:20, group:'Back',    p1:'Left Wing',
+    friS:['Unavailable','Started','Started','Started'], sunS:['Sub','Sub','Not Selected','Not Selected'],
+    fri:['Out','In','In','In'], sun:['','Played','In','In'], tr:['Yes','Yes','Yes','Yes','No','Yes','Yes','Yes']},
+  {name:'Jackson Kendall',  jersey:5,  group:'Forward', p1:'Right Lock',
+    friS:['Started','Started','Started','Started'], sunS:['Started','Started','Started','Started'],
+    fri:['In','In','In','In'], sun:['In','In','In','In'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes','Yes']},
+  {name:'Patrick Keenen',   jersey:3,  group:'Forward', p1:'Loosehead Prop',
+    friS:['Started','Started','Started','Started'], sunS:['Started','Started','Started','Started'],
+    fri:['In','In','In','In'], sun:['In','In','In','In'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes','Yes']},
+  {name:'Sasha Hayim',      jersey:18, group:'Back',    p1:'Left Wing',
+    friS:['Started','N.R.','Started','Started'], sunS:['Started','Started','Started','Started'],
+    fri:['In','N.R.','In','In'], sun:['In','In','Out','In'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes','Yes']},
+  {name:'Xavier Reddy',     jersey:15, group:'Forward', p1:'Number Eight',
+    friS:['N.R.','Started','Started','Started'], sunS:['Sub','Not Selected','Not Selected','Started'],
+    fri:['N.R.','In','In','In'], sun:['','In','In','In'], tr:['Yes','Yes','Yes','Yes','No','Yes','Yes','Yes']},
+  {name:'Michael Dunworth', jersey:2,  group:'Forward', p1:'Number Eight',
+    friS:['Started','Started','Started','Started'], sunS:['Started','Started','Started','Started'],
+    fri:['In','In','In','In'], sun:['In','In','In','In'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes','Yes']},
+  {name:'Thomas Morgan',    jersey:11, group:'Back',    p1:'Fly Half',
+    friS:['Started','Started','Started','Started'], sunS:['Unavailable','Unavailable','N/A','N/A'],
+    fri:['In','In','Out','In'], sun:['Out','Out','In','In'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes','Yes']},
+  {name:'Henry Scott',      jersey:17, group:'Forward', p1:'Left Lock',
+    friS:['N.R.','Unavailable','Started','Started'], sunS:['Started','Unavailable','Not Selected','Started'],
+    fri:['N.R.','Out','In','In'], sun:['','Out','In','In'], tr:['Yes','Yes','Yes','Yes','No','Yes','Yes','Yes']},
+  {name:'Edward Macassey',  jersey:10, group:'Back',    p1:'Scrum Half',
+    friS:['Started','Started','Started','Started'], sunS:['Unavailable','Started','Started','Started'],
+    fri:['In','In','In','In'], sun:['Out','In','In','In'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes','Yes']},
+  {name:'Lachlan McDonald', jersey:12, group:'Back',    p1:'Left Wing',
+    friS:['Started','Started','Started','Started'], sunS:['','','N/A','Started'],
+    fri:['In','In','In','In'], sun:['','','','In'], tr:['Yes','Yes','Yes','No','No','Yes','Yes','Yes']},
+  {name:'Max Boss',         jersey:9,  group:'Back',    p1:'Fly Half',
+    friS:['Unavailable','Unavailable','Started','Started'], sunS:['Unavailable','Unavailable','N/A','N/A'],
+    fri:['Out','Out','In','In'], sun:['Out','Out','In',''], tr:['Yes','Yes','Yes','No','No','Yes','No','Yes']},
+  {name:'Nathan Evans',     jersey:13, group:'Back',    p1:'Scrum Half',
+    friS:['Started','Started','Started','Started'], sunS:['Unavailable','Started','Started','Started'],
+    fri:['In','In','In','In'], sun:['Out','In','In','In'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes','Yes']},
+  {name:'Beau Hack',        jersey:6,  group:'Back',    p1:'Left Centre',
+    friS:['Started','Started','Started','Started'], sunS:['Started','Started','Not Selected','Not Selected'],
+    fri:['In','In','In','In'], sun:['Out','In','In','In'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes','Yes']},
+  {name:'Teddy Russell',    jersey:8,  group:'Forward', p1:'Hooker',
+    friS:['Unavailable','Started','Started','Started'], sunS:['Started','Unavailable','N.R.','Not Selected'],
+    fri:['Out','In','In','In'], sun:['In','x','x','In'], tr:['No','Yes','Yes','No','No','Yes','No','Yes']},
+  {name:'Kycen Puroku',     jersey:7,  group:'Back',    p1:'Left Centre',
+    friS:['Started','Started','Started','Started'], sunS:['Started','Unavailable','Not Selected','Started'],
+    fri:['In','In','In','In'], sun:['Out','Out','','In'], tr:['Yes','Yes','Yes','Yes','Yes','Yes','Yes','Yes']},
+  {name:'Freddie Kirrane',  jersey:19, group:'Back',    p1:'Right Wing',
+    friS:['Started','Started','Started','Started'], sunS:['Unavailable','','N/A','N/A'],
+    fri:['In','In','In','In'], sun:['Out','','',''], tr:['Yes','Yes','No','Yes','Yes','No','Yes','Yes']},
+  {name:'Watene Falemanu',  jersey:21, group:'Forward', p1:'Loosehead Prop',
+    friS:['Started','Started','Started','Started'], sunS:['Started','Started','Unavailable','Started'],
+    fri:['In','In','In','In'], sun:['In','In','','In'], tr:['Yes','No','No','Yes','No','Yes','No','Yes']},
+  {name:'Elliot Dean',      jersey:16, group:'Forward', p1:'Number Eight',
+    friS:['Started','N.R.','Started','Started'], sunS:['Started','Unavailable','Started','Started'],
+    fri:['In','N.R.','In','In'], sun:['In','x','In','In'], tr:['Yes','Yes','No','Yes','Yes','No','Yes','Yes']},
+  {name:'Kai Lianto',       jersey:1,  group:'Forward', p1:'Hooker',
+    friS:['Started','N.R.','Started','Started'], sunS:['','Started','Unavailable','Started'],
+    fri:['In','N.R.','In','In'], sun:['','In','','In'], tr:['Yes','No','Yes','No','Yes','No','No','Yes']},
+  {name:'Aiden Schultz',    jersey:null,group:'Back',   p1:'Left Wing',
+    friS:['Unavailable','Started','Started','Started'], sunS:['Unavailable','Started','Started','Started'],
+    fri:['Out','In','In','In'], sun:['Out','In','In','In'], tr:['No','Yes','No','Yes','No','Yes','No','Yes']},
+];
+
+const FRI_ROUNDS = 4; // historical rounds in static data
+const SUN_ROUNDS = 4;
+const TRAINING_SESSIONS = [
+  '11 Mar','18 Mar','25 Mar','1 Apr','8 Apr','15 Apr','22 Apr','29 Apr'
+];
+
+// ── PIN logic ─────────────────────────────────────────────────────────────────
+let pinEntry = '';
+
+function updatePinDots(error=false) {
+  for (let i=0; i<4; i++) {
+    const d = document.getElementById('d'+i);
+    d.className = 'pin-dot' + (i < pinEntry.length ? (error?' error':' filled') : '');
+  }
+}
+
+document.querySelectorAll('.pin-btn[data-n]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (pinEntry.length >= 4) return;
+    pinEntry += btn.dataset.n;
+    updatePinDots();
+    if (pinEntry.length === 4) {
+      if (pinEntry === PIN) {
+        document.getElementById('pin-screen').style.display = 'none';
+        document.getElementById('main-container').style.display = 'block';
+        loadAllData();
+      } else {
+        updatePinDots(true);
+        document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
+        setTimeout(() => { pinEntry=''; updatePinDots(); document.getElementById('pin-error').textContent=''; }, 1200);
+      }
+    }
+  });
+});
+
+document.getElementById('pin-del').addEventListener('click', () => {
+  pinEntry = pinEntry.slice(0,-1); updatePinDots();
+  document.getElementById('pin-error').textContent = '';
+});
+
+document.getElementById('lock-btn').addEventListener('click', () => {
+  pinEntry = '';
+  document.getElementById('main-container').style.display = 'none';
+  document.getElementById('pin-screen').style.display = 'flex';
+  updatePinDots();
+});
+
+// ── Data store ────────────────────────────────────────────────────────────────
+let liveResponses = {}; // { 'round|team': { playerName: {availability,needsRide,notes} } }
+let liveTeamSlots = {}; // { 'round|team': { slotNum: playerName } }
+let trainingData  = {}; // { date: { sessionLabel, records: { player: status } } }
+let matchStats    = []; // [ { round, team, player, tries, convMade, convMissed, penalties, points } ]
+let lastSyncTime  = null;
+let activeTab     = 'players';
+let sortBy        = 'name';
+
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+async function apiGet(params) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    const r = await fetch(APPS_SCRIPT_URL+'?'+qs);
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+// ── Load all data from sheet ──────────────────────────────────────────────────
+async function loadAllData() {
+  setSyncStatus('loading');
+  try {
+    // Load training
+    const tr = await apiGet({ action:'getTraining' });
+    if (tr && tr.success) trainingData = tr.sessions || {};
+
+    // Load match stats
+    const ms = await apiGet({ action:'getMatchStats' });
+    if (ms && ms.success) matchStats = ms.records || [];
+
+    // Load availability for rounds 1-8 both teams
+    const teams = ['Coogee 11','Coogee Barbarians 11'];
+    for (const team of teams) {
+      for (let r=1; r<=8; r++) {
+        const data = await apiGet({ action:'responses', round:r, team });
+        if (data && data.success && Object.keys(data.responses||{}).length > 0) {
+          liveResponses[`${r}|${team}`] = data.responses;
+        }
+        const td = await apiGet({ action:'team', round:r, team });
+        if (td && td.success && Object.keys(td.slots||{}).length > 0) {
+          liveTeamSlots[`${r}|${team}`] = td.slots;
+        }
+      }
+    }
+
+    lastSyncTime = new Date();
+    setSyncStatus('ok');
+    renderTab(activeTab);
+  } catch(e) {
+    setSyncStatus('error');
+  }
+}
+
+function setSyncStatus(state) {
+  const dot = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  if (state==='loading') { dot.style.background='#ff9500'; label.textContent='Syncing data…'; }
+  else if (state==='ok') { dot.style.background='var(--green)'; label.textContent='Last synced '+lastSyncTime.toLocaleTimeString(); }
+  else { dot.style.background='var(--red)'; label.textContent='Sync failed — showing cached data'; }
+}
+
+document.getElementById('sync-btn').addEventListener('click', () => { loadAllData(); showToast('Refreshing…'); });
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeTab = btn.dataset.tab;
+    renderTab(activeTab);
+  });
+});
+
+function renderTab(tab) {
+  const content = document.getElementById('tab-content');
+  if (tab==='players') content.innerHTML = buildPlayersTab();
+  else if (tab==='training') content.innerHTML = buildTrainingTab();
+  else content.innerHTML = buildSeasonTab();
+  attachTabEvents();
+}
+
+// ── Stats calculation helpers ─────────────────────────────────────────────────
+function calcPlayerStats(player) {
+  // Games played — Friday (historical)
+  const friPlayed = player.friS.filter(v=>v==='Started'||v==='Sub').length;
+  const friOut    = player.friS.filter(v=>v==='Unavailable').length;
+  const friNS     = player.friS.filter(v=>v==='Not Selected').length;
+  const friAvail  = player.fri.filter(v=>v==='In'||v==='N.R.'||v==='Played').length;
+
+  // Games played — Sunday (historical)
+  const sunPlayed = player.sunS.filter(v=>v==='Started'||v==='Sub').length;
+  const sunOut    = player.sunS.filter(v=>v==='Unavailable').length;
+  const sunNS     = player.sunS.filter(v=>v==='Not Selected').length;
+  const sunAvail  = player.sun.filter(v=>v==='In'||v==='Played').length;
+
+  // % of total rounds played
+  const friPct    = FRI_ROUNDS > 0 ? Math.round(friPlayed/FRI_ROUNDS*100) : 0;
+  const sunPct    = SUN_ROUNDS > 0 ? Math.round(sunPlayed/SUN_ROUNDS*100) : 0;
+
+  // % games played when available
+  const friAvailPct = friAvail > 0 ? Math.round(friPlayed/friAvail*100) : null;
+  const sunAvailPct = sunAvail > 0 ? Math.round(sunPlayed/sunAvail*100) : null;
+
+  // Training
+  const tr = player.tr || [];
+  const trTotal    = tr.filter(v=>v!=='').length;
+  const trAttended = tr.filter(v=>v==='Yes').length;
+  const trPct      = trTotal > 0 ? Math.round(trAttended/trTotal*100) : null;
+
+  // Scoring from matchStats
+  const pStats = matchStats.filter(r => r.player === player.name);
+  const tries     = pStats.reduce((s,r)=>s+(+r.tries||0),0);
+  const convMade  = pStats.reduce((s,r)=>s+(+r.convMade||0),0);
+  const convMissed= pStats.reduce((s,r)=>s+(+r.convMissed||0),0);
+  const penalties = pStats.reduce((s,r)=>s+(+r.penalties||0),0);
+  const points    = tries*5 + convMade*2 + penalties*3;
+
+  return { friPlayed, friOut, friNS, friAvail, friPct, friAvailPct,
+           sunPlayed, sunOut, sunNS, sunAvail, sunPct, sunAvailPct,
+           trAttended, trTotal, trPct,
+           tries, convMade, convMissed, penalties, points };
+}
+
+function pctColor(pct) {
+  if (pct === null) return 'var(--muted)';
+  if (pct >= 75) return 'var(--green)';
+  if (pct >= 50) return 'var(--orange)';
+  return 'var(--red)';
+}
+
+function barColor(pct) {
+  if (pct === null || pct === 0) return 'rgba(255,255,255,0.15)';
+  if (pct >= 75) return 'var(--green)';
+  if (pct >= 50) return 'var(--orange)';
+  return 'var(--red)';
+}
+
+// ── Players tab ───────────────────────────────────────────────────────────────
+function buildPlayersTab() {
+  let players = SQUAD.map(p => ({ p, s: calcPlayerStats(p) }));
+
+  if (sortBy === 'points') players.sort((a,b) => b.s.points-a.s.points);
+  else if (sortBy === 'games') players.sort((a,b) => (b.s.friPlayed+b.s.sunPlayed)-(a.s.friPlayed+a.s.sunPlayed));
+  else if (sortBy === 'training') players.sort((a,b) => (b.s.trPct||0)-(a.s.trPct||0));
+  else players.sort((a,b) => a.p.name.localeCompare(b.p.name));
+
+  const cards = players.map(({p,s}) => `
+    <div class="player-report-card">
+      <div class="prc-header">
+        <span class="prc-jersey">${p.jersey??'—'}</span>
+        <span class="prc-name">${p.name}</span>
+        <span class="prc-group ${p.group==='Forward'?'grp-fwd':'grp-back'}">${p.group}</span>
+        <span class="prc-pts">${s.points}pts</span>
+      </div>
+
+      <div class="stat-blocks">
+        <div class="stat-block">
+          <div class="sb-val" style="color:var(--blue)">${s.friPlayed}</div>
+          <div class="sb-lbl">Fri games</div>
+        </div>
+        <div class="stat-block">
+          <div class="sb-val" style="color:var(--purple)">${s.sunPlayed}</div>
+          <div class="sb-lbl">Sun games</div>
+        </div>
+        <div class="stat-block">
+          <div class="sb-val" style="color:${pctColor(s.trPct)}">${s.trPct!==null?s.trPct+'%':'—'}</div>
+          <div class="sb-lbl">Training</div>
+        </div>
+      </div>
+
+      <div class="prc-bars">
+        <div class="prc-bar-row">
+          <span class="prc-bar-label">Fri % of rounds</span>
+          <div class="prc-bar-bg"><div class="prc-bar-fill" style="width:${s.friPct}%;background:${barColor(s.friPct)}"></div></div>
+          <span class="prc-bar-pct" style="color:${pctColor(s.friPct)}">${s.friPct}%</span>
+        </div>
+        <div class="prc-bar-row">
+          <span class="prc-bar-label">Fri when available</span>
+          <div class="prc-bar-bg"><div class="prc-bar-fill" style="width:${s.friAvailPct||0}%;background:${barColor(s.friAvailPct)}"></div></div>
+          <span class="prc-bar-pct" style="color:${pctColor(s.friAvailPct)}">${s.friAvailPct!==null?s.friAvailPct+'%':'—'}</span>
+        </div>
+        <div class="prc-bar-row">
+          <span class="prc-bar-label">Sun % of rounds</span>
+          <div class="prc-bar-bg"><div class="prc-bar-fill" style="width:${s.sunPct}%;background:${barColor(s.sunPct)}"></div></div>
+          <span class="prc-bar-pct" style="color:${pctColor(s.sunPct)}">${s.sunPct}%</span>
+        </div>
+        <div class="prc-bar-row">
+          <span class="prc-bar-label">Sun when available</span>
+          <div class="prc-bar-bg"><div class="prc-bar-fill" style="width:${s.sunAvailPct||0}%;background:${barColor(s.sunAvailPct)}"></div></div>
+          <span class="prc-bar-pct" style="color:${pctColor(s.sunAvailPct)}">${s.sunAvailPct!==null?s.sunAvailPct+'%':'—'}</span>
+        </div>
+      </div>
+
+      ${s.tries||s.convMade||s.convMissed||s.penalties ? `
+      <div class="scoring-row">
+        ${s.tries?`<span class="scoring-chip chip-try">🏉 ${s.tries} tr${s.tries!==1?'ies':'y'}</span>`:''}
+        ${s.convMade?`<span class="scoring-chip chip-conv">✓ ${s.convMade} conv</span>`:''}
+        ${s.convMissed?`<span class="scoring-chip chip-miss">✗ ${s.convMissed} missed</span>`:''}
+        ${s.penalties?`<span class="scoring-chip chip-pen">🎯 ${s.penalties} pen</span>`:''}
+      </div>` : ''}
+    </div>`).join('');
+
+  return `
+    <div class="filter-bar">
+      <span class="filter-label">Sort:</span>
+      <button class="filter-btn ${sortBy==='name'?'active':''}" data-sort="name">A–Z</button>
+      <button class="filter-btn ${sortBy==='games'?'active':''}" data-sort="games">Games</button>
+      <button class="filter-btn ${sortBy==='points'?'active':''}" data-sort="points">Points</button>
+      <button class="filter-btn ${sortBy==='training'?'active':''}" data-sort="training">Training</button>
+    </div>
+    ${cards}`;
+}
+
+// ── Training tab ──────────────────────────────────────────────────────────────
+function buildTrainingTab() {
+  // Merge static historical data with live sheet data
+  const sessionDates = Object.keys(trainingData).sort();
+  const allSessions  = [...TRAINING_SESSIONS, ...sessionDates.filter(d => !TRAINING_SESSIONS.includes(d))];
+
+  const playerCards = SQUAD.map(p => {
+    // Historical (static) — 8 sessions
+    const hist = p.tr || [];
+    // Live from sheet
+    const liveDots = sessionDates.map(d => trainingData[d]?.records[p.name] || null);
+    const allDots  = [...hist, ...liveDots];
+    const total    = allDots.filter(v=>v!==null&&v!=='').length;
+    const attended = allDots.filter(v=>v==='Yes'||v==='yes').length;
+    const pct      = total>0 ? Math.round(attended/total*100) : null;
+
+    const dots = hist.map(v => {
+      if (!v) return '<div class="session-dot dot-unknown" title="No data"></div>';
+      if (v==='Yes') return '<div class="session-dot dot-yes" title="Attended"></div>';
+      if (v==='No')  return '<div class="session-dot dot-no" title="Absent"></div>';
+      return '<div class="session-dot dot-unknown" title="'+v+'"></div>';
+    }).join('') + liveDots.map((v,i) => {
+      const label = sessionDates[i];
+      if (v==='yes') return '<div class="session-dot dot-yes" title="'+label+': Attended"></div>';
+      if (v==='no')  return '<div class="session-dot dot-no" title="'+label+': Absent"></div>';
+      if (v==='injured') return '<div class="session-dot dot-injured" title="'+label+': Injured"></div>';
+      if (v==='unavail') return '<div class="session-dot dot-unavail" title="'+label+': Unavailable"></div>';
+      return '<div class="session-dot dot-unknown" title="No data"></div>';
+    }).join('');
+
+    return `
+      <div class="training-player-card">
+        <div class="tpc-name">${p.name}</div>
+        <div class="tpc-sessions">${dots}</div>
+        <div class="tpc-pct" style="color:${pctColor(pct)}">${attended}/${total} sessions ${pct!==null?'('+pct+'%)':''}
+        </div>
+      </div>`;
+  }).join('');
+
+  const legend = `
+    <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:1rem;">
+      <span style="display:flex;align-items:center;gap:4px"><div class="session-dot dot-yes" style="width:10px;height:10px;border-radius:2px"></div>Attended</span>
+      <span style="display:flex;align-items:center;gap:4px"><div class="session-dot dot-no" style="width:10px;height:10px;border-radius:2px"></div>Absent</span>
+      <span style="display:flex;align-items:center;gap:4px"><div class="session-dot dot-injured" style="width:10px;height:10px;border-radius:2px"></div>Injured</span>
+      <span style="display:flex;align-items:center;gap:4px"><div class="session-dot dot-unavail" style="width:10px;height:10px;border-radius:2px"></div>Unavailable</span>
+    </div>`;
+
+  return `<div class="section-label">Training attendance — ${allSessions.length} sessions tracked</div>
+    ${legend}
+    <div class="training-grid">${playerCards}</div>`;
+}
+
+// ── Season tab ────────────────────────────────────────────────────────────────
+function buildSeasonTab() {
+  const friFixtures = [
+    {r:1,opp:'Burraneer Gold',result:'L 41–12'},{r:2,opp:'Clovelly Eagles Blue',result:'W 36–12'},
+    {r:3,opp:'Rockdale',result:''},{r:4,opp:'Burraneer Blue',result:'W 31–19'},
+    {r:5,opp:'Maroubra Missiles',result:''},{r:6,opp:'Oatley',result:''},
+    {r:7,opp:'Clovelly Eagles White',result:''},{r:8,opp:'TBC',result:''}
+  ];
+  const sunFixtures = [
+    {r:1,opp:'Hunters Hill Black',result:'W 26–5'},{r:2,opp:'Norths Pirates',result:'L 14–29'},
+    {r:3,opp:'Wakehurst',result:'D 26–26'},{r:4,opp:'Wahroonga Gold',result:'W 36–7'},
+    {r:5,opp:'Mosman Dolphins',result:'W 43–5'},{r:6,opp:'Hornsby Lions',result:''}
+  ];
+
+  function resultPill(r) {
+    if (!r) return '';
+    const cls = r.startsWith('W')?'pill-w':r.startsWith('L')?'pill-l':'pill-d';
+    return `<span class="pill ${cls}">${r}</span>`;
+  }
+
+  function fixtureRows(fixtures) {
+    return fixtures.map(f=>`
+      <div class="summary-row">
+        <span class="summary-key">R${f.r} vs ${f.opp}</span>
+        <span class="summary-val">${resultPill(f.result)||'<span style="color:var(--muted);font-weight:400">Upcoming</span>'}</span>
+      </div>`).join('');
+  }
+
+  // Top scorers
+  const scorerMap = {};
+  matchStats.forEach(r => {
+    if (!scorerMap[r.player]) scorerMap[r.player] = {tries:0,convMade:0,penalties:0,points:0};
+    scorerMap[r.player].tries     += +r.tries||0;
+    scorerMap[r.player].convMade  += +r.convMade||0;
+    scorerMap[r.player].penalties += +r.penalties||0;
+    scorerMap[r.player].points    += +r.points||0;
+  });
+  const topScorers = Object.entries(scorerMap)
+    .sort((a,b)=>b[1].points-a[1].points)
+    .slice(0,5);
+
+  const scoringSection = topScorers.length ? `
+    <div class="section-label" style="margin-top:1.25rem">Top scorers</div>
+    <div class="summary-card">
+      ${topScorers.map(([name,s],i)=>`
+        <div class="summary-row">
+          <span class="summary-key">${i+1}. ${name}</span>
+          <span class="summary-val" style="color:var(--teal)">${s.points}pts</span>
+        </div>
+        <div style="font-size:11px;color:var(--muted);padding:0 0 6px 0">
+          ${s.tries?s.tries+' tries ':''}${s.convMade?s.convMade+' conv ':''}${s.penalties?s.penalties+' pen':''}
+        </div>`).join('')}
+    </div>` : '';
+
+  return `
+    <div class="section-label">Coogee 11 — Friday nights</div>
+    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(friFixtures)}</div>
+    <div class="section-label">Coogee Barbarians 11 — Sunday mornings</div>
+    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(sunFixtures)}</div>
+    ${scoringSection}`;
+}
+
+function attachTabEvents() {
+  document.querySelectorAll('.filter-btn[data-sort]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sortBy = btn.dataset.sort;
+      renderTab('players');
+    });
+  });
+}
+</script>
+</body>
+</html>
