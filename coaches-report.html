@@ -412,11 +412,19 @@ function calcPlayerStats(player) {
   const friAvailPct = friAvail > 0 ? Math.round(friPlayed/friAvail*100) : null;
   const sunAvailPct = sunAvail > 0 ? Math.round(sunPlayed/sunAvail*100) : null;
 
-  // Training
-  const tr = player.tr || [];
-  const trTotal    = tr.filter(v=>v!=='').length;
-  const trAttended = tr.filter(v=>v==='Yes').length;
-  const trPct      = trTotal > 0 ? Math.round(trAttended/trTotal*100) : null;
+  // Training — use sheet data if available, else fall back to static tr[]
+  const sheetDates = Object.keys(trainingData).sort();
+  const hasSheetTr = sheetDates.some(d => trainingData[d]?.records?.[player.name] !== undefined);
+  let trAttended, trTotal;
+  if (hasSheetTr) {
+    trTotal    = sheetDates.filter(d => { const v=trainingData[d]?.records?.[player.name]; return v&&v!==''; }).length;
+    trAttended = sheetDates.filter(d => trainingData[d]?.records?.[player.name]==='yes').length;
+  } else {
+    const tr   = player.tr || [];
+    trTotal    = tr.filter(v=>v!=='').length;
+    trAttended = tr.filter(v=>v==='Yes').length;
+  }
+  const trPct = trTotal > 0 ? Math.round(trAttended/trTotal*100) : null;
 
   // Scoring from matchStats
   const pStats = matchStats.filter(r => r.player === player.name);
@@ -524,34 +532,37 @@ function buildPlayersTab() {
 
 // ── Training tab ──────────────────────────────────────────────────────────────
 function buildTrainingTab() {
-  // Merge static historical data with live sheet data
   const sessionDates = Object.keys(trainingData).sort();
-  const allSessions  = [...TRAINING_SESSIONS, ...sessionDates.filter(d => !TRAINING_SESSIONS.includes(d))];
+  const usingSheet   = sessionDates.length > 0;
 
   const playerCards = SQUAD.map(p => {
-    // Historical (static) — 8 sessions
-    const hist = p.tr || [];
-    // Live from sheet
-    const liveDots = sessionDates.map(d => trainingData[d]?.records[p.name] || null);
-    const allDots  = [...hist, ...liveDots];
-    const total    = allDots.filter(v=>v!==null&&v!=='').length;
-    const attended = allDots.filter(v=>v==='Yes'||v==='yes').length;
-    const pct      = total>0 ? Math.round(attended/total*100) : null;
+    const hasSheetData = usingSheet && sessionDates.some(d => trainingData[d]?.records?.[p.name] !== undefined);
+    let dots = '', total = 0, attended = 0;
 
-    const dots = hist.map(v => {
-      if (!v) return '<div class="session-dot dot-unknown" title="No data"></div>';
-      if (v==='Yes') return '<div class="session-dot dot-yes" title="Attended"></div>';
-      if (v==='No')  return '<div class="session-dot dot-no" title="Absent"></div>';
-      return '<div class="session-dot dot-unknown" title="'+v+'"></div>';
-    }).join('') + liveDots.map((v,i) => {
-      const label = sessionDates[i];
-      if (v==='yes') return '<div class="session-dot dot-yes" title="'+label+': Attended"></div>';
-      if (v==='no')  return '<div class="session-dot dot-no" title="'+label+': Absent"></div>';
-      if (v==='injured') return '<div class="session-dot dot-injured" title="'+label+': Injured"></div>';
-      if (v==='unavail') return '<div class="session-dot dot-unavail" title="'+label+': Unavailable"></div>';
-      return '<div class="session-dot dot-unknown" title="No data"></div>';
-    }).join('');
+    if (hasSheetData) {
+      // Sheet data is source of truth — one dot per session
+      dots = sessionDates.map(d => {
+        const v = trainingData[d]?.records?.[p.name];
+        if (v === 'yes')     { total++; attended++; return `<div class="session-dot dot-yes" title="${d}: Attended"></div>`; }
+        if (v === 'no')      { total++; return `<div class="session-dot dot-no" title="${d}: Absent"></div>`; }
+        if (v === 'injured') { total++; return `<div class="session-dot dot-injured" title="${d}: Injured"></div>`; }
+        if (v === 'unavail') { total++; return `<div class="session-dot dot-unavail" title="${d}: Unavailable"></div>`; }
+        return `<div class="session-dot dot-unknown" title="${d}: No data"></div>`;
+      }).join('');
+    } else {
+      // Fallback: static tr[] data (players not in training sheet)
+      const hist = p.tr || [];
+      total    = hist.filter(v=>v!=='').length;
+      attended = hist.filter(v=>v==='Yes').length;
+      dots = hist.map((v,i) => {
+        const lbl = TRAINING_SESSIONS[i] || `Session ${i+1}`;
+        if (v==='Yes') return `<div class="session-dot dot-yes" title="${lbl}"></div>`;
+        if (v==='No')  return `<div class="session-dot dot-no" title="${lbl}"></div>`;
+        return `<div class="session-dot dot-unknown" title="${lbl}: No data"></div>`;
+      }).join('');
+    }
 
+    const pct = total > 0 ? Math.round(attended/total*100) : null;
     return `
       <div class="training-player-card">
         <div class="tpc-name">${p.name}</div>
@@ -561,6 +572,7 @@ function buildTrainingTab() {
       </div>`;
   }).join('');
 
+  const sessionCount = usingSheet ? sessionDates.length : TRAINING_SESSIONS.length;
   const legend = `
     <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:1rem;">
       <span style="display:flex;align-items:center;gap:4px"><div class="session-dot dot-yes" style="width:10px;height:10px;border-radius:2px"></div>Attended</span>
@@ -569,7 +581,7 @@ function buildTrainingTab() {
       <span style="display:flex;align-items:center;gap:4px"><div class="session-dot dot-unavail" style="width:10px;height:10px;border-radius:2px"></div>Unavailable</span>
     </div>`;
 
-  return `<div class="section-label">Training attendance — ${allSessions.length} sessions tracked</div>
+  return `<div class="section-label">Training attendance — ${sessionCount} sessions tracked</div>
     ${legend}
     <div class="training-grid">${playerCards}</div>`;
 }
