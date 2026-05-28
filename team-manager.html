@@ -334,6 +334,11 @@ async function loadTeamFromSheet() {
 const POLL_OPTIONS = ['Yes, count me in',"Sorry, can't make it",'Help! I need a ride, please','Other (Contact Manager)'];
 const SAVE_KEY = 'rugby_mgr_v3';
 
+// Squad history — loaded lazily when squad tab is opened
+let liveSquadHistory = { fri:{}, sun:{} };
+let squadHistoryLoaded = false;
+let squadHistoryLoading = false;
+
 const TEAMS = {
   seahorses:  { label:'Coogee 11',           detail:'Friday nights',   histKey:'fri' },
   barbarians: { label:'Coogee Barbarians 11', detail:'Sunday mornings', histKey:'sun' }
@@ -427,6 +432,9 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 
 function histDot(val, pos) {
   if(!val) return '<span style="color:#d1d1d6;font-size:11px">·</span>';
+  // Normalise friS-style values ('Started', 'Unavailable', 'Not Selected')
+  const v = val==='Started'?'In' : val==='Unavailable'?'Out' : val==='Not Selected'?'NS' : val==='N/A'?null : val;
+  if(v===null) return ''; // N/A — skip
   const map = {
     'In':    '<span style="color:#34c759;font-size:11px;font-weight:700" title="Started">✓</span>',
     'Sub':   '<span style="color:#007aff;font-size:11px;font-weight:700" title="Came on as sub">↑</span>',
@@ -436,8 +444,8 @@ function histDot(val, pos) {
     'x':     '<span style="color:#8e8e93;font-size:11px" title="No response">?</span>',
     'Played':'<span style="color:#34c759;font-size:11px;font-weight:700" title="Played">✓</span>',
   };
-  const dot = map[val] || `<span style="color:#aeaeb2;font-size:11px">${val}</span>`;
-  if(pos && (val==='In'||val==='Sub'||val==='Played')) {
+  const dot = map[v] || `<span style="color:#aeaeb2;font-size:11px">${v}</span>`;
+  if(pos && (val==='In'||val==='Sub'||val==='Played'||val==='Started')) {
     return `<span title="${pos}">${dot}</span>`;
   }
   return dot;
@@ -549,34 +557,124 @@ function buildPoll(){
   `;
 }
 
+// Build per-player status map for a round from sheet data
+function buildRoundStatus(slots, responses) {
+  const starters = new Set(), bench = new Set();
+  if(slots) Object.entries(slots).forEach(([num,name])=>{
+    if(!name) return;
+    if(+num<=12) starters.add(name); else bench.add(name);
+  });
+  const result = {};
+  rawSquad.forEach(p=>{
+    if(starters.has(p.name))      result[p.name]='Started';
+    else if(bench.has(p.name))    result[p.name]='Sub';
+    else if(responses?.[p.name]){
+      const a=responses[p.name].availability;
+      result[p.name]= a==='Yes, count me in' ? 'Not Selected'
+                    : a==="Sorry, can't make it" ? 'Unavailable' : 'N.R.';
+    } else result[p.name]='';
+  });
+  return result;
+}
+
+async function loadSquadHistory() {
+  if(squadHistoryLoaded||squadHistoryLoading) return;
+  squadHistoryLoading=true;
+  // Fetch completed rounds not in static data (round > 4)
+  const friFutures = FIXTURES.seahorses.filter(f=>f.result&&f.round>4);
+  const sunFutures = FIXTURES.barbarians.filter(f=>f.result&&f.round>4);
+  await Promise.all([
+    ...friFutures.map(async f=>{
+      const [t,r]=await Promise.all([
+        apiGet({action:'team',round:f.round,team:'Coogee 11'}),
+        apiGet({action:'responses',round:f.round,team:'Coogee 11'})
+      ]);
+      liveSquadHistory.fri[f.round]=buildRoundStatus(t?.slots,r?.responses);
+    }),
+    ...sunFutures.map(async f=>{
+      const [t,r]=await Promise.all([
+        apiGet({action:'team',round:f.round,team:'Coogee Barbarians 11'}),
+        apiGet({action:'responses',round:f.round,team:'Coogee Barbarians 11'})
+      ]);
+      liveSquadHistory.sun[f.round]=buildRoundStatus(t?.slots,r?.responses);
+    })
+  ]);
+  squadHistoryLoaded=true; squadHistoryLoading=false;
+  if(state.section==='squad'&&state.tab==='squad') render();
+}
+
 function buildSquad2(){
   const sq=squad(); const g=AGE_GRADES[td().grade];
+
+  // Kick off lazy load for rounds beyond static data
+  if(!squadHistoryLoaded&&!squadHistoryLoading) loadSquadHistory();
+
+  const friFix=FIXTURES.seahorses;
+  const sunFix=FIXTURES.barbarians;
+
+  function roundDot(player, round, team) {
+    const idx=round-1; // 0-indexed into static arrays
+    const histS = team==='fri'?(player.friS||[]):(player.sunS||[]);
+    const histP = team==='fri'?(player.friPos||[]):(player.sunPos||[]);
+    const fix   = team==='fri'?friFix.find(f=>f.round===round):sunFix.find(f=>f.round===round);
+
+    if(idx<histS.length) {
+      // Static data (rounds 1–4)
+      const val=histS[idx]; const pos=histP[idx];
+      if(!val) return `<span style="color:#d1d1d6;font-size:11px" title="R${round}">·</span>`;
+      return histDot(val, pos?`${pos} · R${round}`:`R${round}`);
+    }
+    // Live data (rounds 5+)
+    const live = team==='fri'?liveSquadHistory.fri[round]:liveSquadHistory.sun[round];
+    if(live) {
+      const val=live[player.name]||'';
+      if(!val) return `<span style="color:#d1d1d6;font-size:11px" title="R${round}">·</span>`;
+      return histDot(val, `R${round}`);
+    }
+    // Game played but still loading
+    if(fix?.result) return `<span style="color:#e5e5ea;font-size:11px" title="R${round}: loading…">…</span>`;
+    return ''; // future round — no dot
+  }
+
   return `
-    <div class="notice">${TEAMS[state.team].label} · ${g.label}: ${g.starters.length} starters + ${g.subCount} subs. Both teams share this squad.<br><span style="color:#ff9500;font-size:12px">⚠️ Notes: Theo Deichsel now #23, Kai Lianto #1 (jerseys swapped). Cade Forshaw and Oliver Worley are Sunday/Barbarians only. Xavier Saunders unregistered, Fridays unavailable.</span></div>
+    <div class="notice">${TEAMS[state.team].label} · ${g.label}: ${g.starters.length} starters + ${g.subCount} subs. Both teams share this squad.<br>
+      <span style="color:#ff9500;font-size:12px">⚠️ Theo Deichsel #23, Kai Lianto #1. Cade Forshaw/Oliver Worley are Sunday only. Xavier Saunders unregistered.</span>
+      ${squadHistoryLoading?'<br><span style="color:#007aff;font-size:12px">Loading round history…</span>':''}
+    </div>
     <div style="display:flex;gap:10px;font-size:12px;color:#8e8e93;padding:0 4px;margin-bottom:8px;flex-wrap:wrap">
       <span>${histDot('In')} Started</span>
       <span>${histDot('Sub')} Sub</span>
       <span><span style="color:#ff9500;font-size:11px;font-weight:700">U</span> Unavailable</span>
       <span><span style="color:#aeaeb2;font-size:11px;font-weight:700">NS</span> Not selected</span>
       <span>${histDot('N.R.')} No response</span>
-      <span style="font-size:11px;color:#aeaeb2">Tap/hover dot to see position</span>
     </div>
-    <div class="section-label">Squad — ${sq.length} players · History: Fri G1·G2·G3 &nbsp;|&nbsp; Sun G1·G2·G3</div>
-    ${sq.map(p=>`
+    <div class="section-label">Squad — ${sq.length} players · All rounds (R1 → latest)</div>
+    ${sq.map(p=>{
+      const friDots=friFix.map(f=>roundDot(p,f.round,'fri')).join('');
+      const sunDots=sunFix.map(f=>roundDot(p,f.round,'sun')).join('');
+      return `
       <div class="card" style="padding:10px 14px">
-        <div class="row">
+        <div class="row" style="margin-bottom:6px">
           <span class="badge-num badge">#${p.jersey??'—'}</span>
           <span class="player-name">${p.name}</span>
           <span class="badge ${p.group==='Forward'?'badge-fwd':'badge-back'}">${p.group}</span>
-          <span style="display:flex;gap:3px;align-items:center;font-size:11px;color:#8e8e93">
-            Fri: ${p.fri.map((v,i)=>histDot(v,p.friPos?.[i])).join('')} &nbsp;Sun: ${p.sun.map((v,i)=>histDot(v,p.sunPos?.[i])).join('')}
-          </span>
+        </div>
+        <div style="font-size:11px;color:#8e8e93">
+          <div style="display:flex;align-items:center;gap:4px;margin-bottom:3px">
+            <span style="width:22px;font-size:10px;font-weight:600;color:#636366;flex-shrink:0">Fri</span>
+            <span style="display:flex;gap:3px">${friDots}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="width:22px;font-size:10px;font-weight:600;color:#636366;flex-shrink:0">Sun</span>
+            <span style="display:flex;gap:3px">${sunDots}</span>
+          </div>
         </div>
         <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
           <span class="pill-pos">${p.p1}</span>
           ${p.alts.map(a=>`<span class="pill-pos" style="opacity:0.6">${a}</span>`).join('')}
         </div>
-      </div>`).join('')}
+      </div>`;
+    }).join('')}
   `;
 }
 
