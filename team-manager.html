@@ -1115,6 +1115,28 @@ function attachEvents(){
 
 storageLoad();
 
+// Auto-advance round when the stored round's game date has passed
+['seahorses','barbarians'].forEach(team => {
+  const t = state.teams[team];
+  if (!t.round || t.round === 'custom') return;
+  const storedFixture = (FIXTURES[team]||[]).find(f => f.round === t.round);
+  if (!storedFixture) return;
+  const gameDate = new Date(storedFixture.isoDate);
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (gameDate < today) {
+    const nextRound = nextRoundForTeam(team);
+    if (nextRound && nextRound !== t.round) {
+      const nextFixture = (FIXTURES[team]||[]).find(f => f.round === nextRound);
+      if (nextFixture) {
+        t.round = nextRound;
+        t.match = {opponent:nextFixture.opponent, date:nextFixture.date, venue:nextFixture.venue, time:nextFixture.time};
+        t.pollResults = {};
+        t.teamSlots = {};
+      }
+    }
+  }
+});
+
 // Inject R5 poll results and team if seahorses has no saved data yet
 // Pre-populate Round 3 availability from spreadsheet
 const R5_POLL = {"Rafferty Moffitt": "Yes, count me in", "William English": "Yes, count me in", "Jackson Kendall": "Yes, count me in", "Patrick Keenen": "Yes, count me in", "Xavier Reddy": "Yes, count me in", "Michael Dunworth": "Yes, count me in", "Thomas Morgan": "Yes, count me in", "Henry Scott": "Yes, count me in", "Edward Macassey": "Yes, count me in", "Lachlan McDonald": "Yes, count me in", "Max Boss": "Yes, count me in", "Nathan Evans": "Yes, count me in", "Beau Hack": "Yes, count me in", "Teddy Russell": "Yes, count me in", "Kycen Puroku": "Yes, count me in", "Freddie Kirrane": "Yes, count me in", "Aiden Schultz": "Yes, count me in", "Kai Lianto": "Yes, count me in", "Theo Deichsel": "Yes, count me in", "Archer Price": "Yes, count me in", "Sasha Hayim": "Yes, count me in", "Watene Falemanu": "Yes, count me in", "Elliot Dean": "Yes, count me in", "Xavier Saunders": "Sorry, can't make it"};
