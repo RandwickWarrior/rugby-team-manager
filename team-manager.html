@@ -725,10 +725,8 @@ function buildField() {
     </div>`;
   }
 
-  // Subs row
-  const subs = Array.from({length: subCount}, (_,i) => ({
-    num: starters.length + i + 1, label: `Sub ${i+1}`
-  }));
+  // Subs row — use positions() so slot numbers are guaranteed identical to positions view
+  const subs = positions().filter(p => p.label.startsWith('Sub'));
 
   function subToken(s) {
     const name = t.teamSlots[s.num] || '';
