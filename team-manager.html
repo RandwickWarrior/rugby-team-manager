@@ -279,26 +279,25 @@ async function apiPost(payload) {
 }
 
 // Fetch responses from Sheet and merge into current team's pollResults
-// Sheet responses take precedence over locally saved data
+// Sheet responses are the source of truth — replace entire pollResults
 async function syncResponsesFromSheet() {
   const t = td();
   const teamLabel = TEAMS[state.team].label;
   const data = await apiGet({ action: 'responses', round: t.round, team: teamLabel });
   if (!data || !data.responses) return false;
 
-  let changed = false;
+  // Build fresh results from sheet — only players who actually responded appear
+  const newResults = {};
   for (const [player, info] of Object.entries(data.responses)) {
-    const mapped = info.availability; // already in poll option format
-    if (t.pollResults[player] !== mapped) {
-      t.pollResults[player] = mapped;
-      changed = true;
-    }
-    // Also handle ride — store as separate marker
-    if (info.needsRide && mapped === 'Yes, count me in') {
-      t.pollResults[player] = 'Yes, count me in';
-    }
+    newResults[player] = info.availability;
   }
-  if (changed) { storageSave(); }
+
+  // Replace entirely so stale entries from previous rounds are removed
+  const changed = JSON.stringify(t.pollResults) !== JSON.stringify(newResults);
+  if (changed) {
+    t.pollResults = newResults;
+    storageSave();
+  }
   return changed;
 }
 
