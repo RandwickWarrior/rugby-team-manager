@@ -703,8 +703,14 @@ function buildField() {
             .replace('Right Wing','R Wing');
   }
 
+  const availNames = new Set(sq.filter(p =>
+    t.pollResults[p.name]==='Yes, count me in' || t.pollResults[p.name]==='Help! I need a ride, please'
+  ).map(p => p.name));
+
   function playerToken(posLabel, slotNum) {
-    const name = t.teamSlots[slotNum] || '';
+    const rawName = t.teamSlots[slotNum] || '';
+    // Only show player if they are actually available for this round
+    const name = (rawName && availNames.has(rawName)) ? rawName : '';
     const player = sq.find(p => p.name === name);
     const jersey = player ? (player.jersey ?? '?') : '';
     const coords = posLayout[posLabel] || { x:50, y:50 };
@@ -729,7 +735,8 @@ function buildField() {
   const subs = positions().filter(p => p.label.startsWith('Sub'));
 
   function subToken(s) {
-    const name = t.teamSlots[s.num] || '';
+    const rawName = t.teamSlots[s.num] || '';
+    const name = (rawName && availNames.has(rawName)) ? rawName : '';
     const player = sq.find(p => p.name === name);
     const jersey = player ? (player.jersey ?? '?') : '';
     const nameParts = name ? name.split(' ') : [];
@@ -749,7 +756,10 @@ function buildField() {
     </div>`;
   }
 
-  const unassigned = starters.filter(p => !t.teamSlots[p.num]).length;
+  const unassigned = starters.filter(p => {
+    const n = t.teamSlots[p.num];
+    return !n || !availNames.has(n);
+  }).length;
   const fieldHeight = grade === 'u12' ? 115 : 105;
 
   return `
