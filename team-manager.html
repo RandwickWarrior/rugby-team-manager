@@ -1062,9 +1062,22 @@ function attachEvents(){
     document.querySelectorAll('[data-poll]').forEach(sel=>{
       sel.addEventListener('change',()=>{
         const t=td();
-        if(sel.value) t.pollResults[sel.dataset.poll]=sel.value;
-        else delete t.pollResults[sel.dataset.poll];
+        const player=sel.dataset.poll;
+        if(sel.value) t.pollResults[player]=sel.value;
+        else delete t.pollResults[player];
         storageSave(); render();
+        // Push manual entry to sheet so it persists and syncs across devices
+        if(sel.value && t.round) {
+          apiPost({
+            action:'submitResponse',
+            round: t.round,
+            team: TEAMS[state.team].label,
+            playerName: player,
+            availability: sel.value,
+            needsRide: false,
+            notes: 'Manual entry'
+          });
+        }
       });
     });
     const gt=document.getElementById('go-team');
