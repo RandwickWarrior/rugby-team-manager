@@ -170,6 +170,7 @@
     <div class="sync-dot" id="sync-dot"></div>
     <span id="sync-label">Loading data…</span>
     <button class="sync-btn" id="sync-btn">↻ Refresh</button>
+    <button class="sync-btn" id="backfill-btn" title="Re-sync training data from source spreadsheet">⬇ Re-backfill</button>
   </div>
 
   <div class="tabs">
@@ -371,6 +372,39 @@ function setSyncStatus(state) {
 }
 
 document.getElementById('sync-btn').addEventListener('click', () => { loadAllData(); showToast('Refreshing…'); });
+
+document.getElementById('backfill-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('backfill-btn');
+  if (!confirm('Re-sync training data from the source spreadsheet?\n\nThis will replace all backfilled training rows with the latest data from the Rugby Team Manager spreadsheet.')) return;
+  btn.textContent = '⏳ Running…';
+  btn.disabled = true;
+  setSyncStatus('loading');
+  document.getElementById('sync-label').textContent = 'Re-backfilling training data… this may take up to 2 minutes';
+  try {
+    // Fire and forget — Apps Script will complete even if fetch times out
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 110000);
+    try {
+      const res = await fetch(APPS_SCRIPT_URL + '?action=backfillTraining&mode=write', { signal: controller.signal });
+      clearTimeout(timeout);
+      const data = await res.json();
+      if (data.success) {
+        showToast(`✅ Backfill complete — ${data.rowsAdded} rows written`);
+      } else {
+        showToast('⚠️ Backfill returned: ' + (data.error || 'unknown error'));
+      }
+    } catch(fetchErr) {
+      clearTimeout(timeout);
+      // Timeout is expected — Apps Script completes server-side
+      showToast('⏳ Backfill running on server — refresh in 30s to see results');
+    }
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  }
+  btn.textContent = '⬇ Re-backfill';
+  btn.disabled = false;
+  setTimeout(() => loadAllData(), 5000); // auto-refresh after 5s
+});
 
 // ── Tab switching ─────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab-btn').forEach(btn => {
