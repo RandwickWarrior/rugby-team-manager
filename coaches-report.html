@@ -259,8 +259,10 @@ const SQUAD = [
     fri:['Out','In','In','In'], sun:['Out','In','In','In'], tr:['No','Yes','No','Yes','No','Yes','No','Yes']},
 ];
 
-const FRI_ROUNDS = 4; // historical rounds in static data
-const SUN_ROUNDS = 4;
+const FRI_ROUNDS = 5; // played rounds (R6 was washout)
+const SUN_ROUNDS = 5;
+const FRI_WASHOUT = [6]; // rounds where game was not played
+const SUN_WASHOUT = [6];
 const TRAINING_SESSIONS = [
   '11 Mar','18 Mar','25 Mar','1 Apr','8 Apr','15 Apr','22 Apr','29 Apr'
 ];
@@ -425,28 +427,68 @@ function renderTab(tab) {
 }
 
 // ── Stats calculation helpers ─────────────────────────────────────────────────
+
+// Derive a player's status for a round from sheet data
+function deriveStatus(playerName, slots, responses) {
+  if (slots) {
+    const inStart = Object.entries(slots).some(([n,p]) => +n<=12 && p===playerName);
+    if (inStart) return 'Started';
+    const inBench = Object.entries(slots).some(([n,p]) => +n>12 && p===playerName);
+    if (inBench) return 'Sub';
+  }
+  const resp = (responses||{})[playerName];
+  if (resp) {
+    if (resp.availability==='Yes, count me in') return 'Not Selected';
+    if (resp.availability==="Sorry, can't make it") return 'Unavailable';
+  }
+  return '';
+}
+
 function calcPlayerStats(player) {
-  // Games played — Friday (historical)
-  const friPlayed = player.friS.filter(v=>v==='Started'||v==='Sub').length;
-  const friOut    = player.friS.filter(v=>v==='Unavailable').length;
-  const friNS     = player.friS.filter(v=>v==='Not Selected').length;
-  const friAvail  = player.fri.filter(v=>v==='In'||v==='N.R.'||v==='Played').length;
+  // ── Games played — derived from live sheet data (all rounds) ─────────────
+  let friStarted=0, friSub=0, friPlayed=0, friOut=0, friNS=0, friAvail=0;
+  let sunStarted=0, sunSub=0, sunPlayed=0, sunOut=0, sunNS=0, sunAvail=0;
 
-  // Games played — Sunday (historical)
-  const sunPlayed = player.sunS.filter(v=>v==='Started'||v==='Sub').length;
-  const sunOut    = player.sunS.filter(v=>v==='Unavailable').length;
-  const sunNS     = player.sunS.filter(v=>v==='Not Selected').length;
-  const sunAvail  = player.sun.filter(v=>v==='In'||v==='Played').length;
+  // Collect all rounds that have any data in the sheet
+  const friRounds = new Set([
+    ...Object.keys(liveTeamSlots).filter(k=>k.endsWith('|Coogee 11')).map(k=>+k.split('|')[0]),
+    ...Object.keys(liveResponses).filter(k=>k.endsWith('|Coogee 11')).map(k=>+k.split('|')[0])
+  ]);
+  const sunRounds = new Set([
+    ...Object.keys(liveTeamSlots).filter(k=>k.endsWith('|Coogee Barbarians 11')).map(k=>+k.split('|')[0]),
+    ...Object.keys(liveResponses).filter(k=>k.endsWith('|Coogee Barbarians 11')).map(k=>+k.split('|')[0])
+  ]);
 
-  // % of total rounds played
-  const friPct    = FRI_ROUNDS > 0 ? Math.round(friPlayed/FRI_ROUNDS*100) : 0;
-  const sunPct    = SUN_ROUNDS > 0 ? Math.round(sunPlayed/SUN_ROUNDS*100) : 0;
+  friRounds.forEach(r => {
+    const slots     = liveTeamSlots[`${r}|Coogee 11`];
+    const responses = liveResponses[`${r}|Coogee 11`];
+    const washout   = FRI_WASHOUT.includes(r);
+    const status    = deriveStatus(player.name, slots, responses);
+    if (!status) return;
+    if (status==='Started') { if(!washout){friStarted++;friPlayed++;} friAvail++; }
+    else if (status==='Sub') { if(!washout){friSub++;friPlayed++;} friAvail++; }
+    else if (status==='Not Selected') { friNS++; friAvail++; }
+    else if (status==='Unavailable')  { friOut++; }
+  });
 
-  // % games played when available
+  sunRounds.forEach(r => {
+    const slots     = liveTeamSlots[`${r}|Coogee Barbarians 11`];
+    const responses = liveResponses[`${r}|Coogee Barbarians 11`];
+    const washout   = SUN_WASHOUT.includes(r);
+    const status    = deriveStatus(player.name, slots, responses);
+    if (!status) return;
+    if (status==='Started') { if(!washout){sunStarted++;sunPlayed++;} sunAvail++; }
+    else if (status==='Sub') { if(!washout){sunSub++;sunPlayed++;} sunAvail++; }
+    else if (status==='Not Selected') { sunNS++; sunAvail++; }
+    else if (status==='Unavailable')  { sunOut++; }
+  });
+
+  const friPct      = FRI_ROUNDS > 0 ? Math.round(friPlayed/FRI_ROUNDS*100) : 0;
+  const sunPct      = SUN_ROUNDS > 0 ? Math.round(sunPlayed/SUN_ROUNDS*100) : 0;
   const friAvailPct = friAvail > 0 ? Math.round(friPlayed/friAvail*100) : null;
   const sunAvailPct = sunAvail > 0 ? Math.round(sunPlayed/sunAvail*100) : null;
 
-  // Training — use sheet data if available, else fall back to static tr[]
+  // ── Training ──────────────────────────────────────────────────────────────
   const sheetDates = Object.keys(trainingData).sort();
   const hasSheetTr = sheetDates.some(d => trainingData[d]?.records?.[player.name] !== undefined);
   let trAttended, trTotal;
@@ -460,13 +502,13 @@ function calcPlayerStats(player) {
   }
   const trPct = trTotal > 0 ? Math.round(trAttended/trTotal*100) : null;
 
-  // Scoring from matchStats
-  const pStats = matchStats.filter(r => r.player === player.name);
-  const tries     = pStats.reduce((s,r)=>s+(+r.tries||0),0);
-  const convMade  = pStats.reduce((s,r)=>s+(+r.convMade||0),0);
+  // ── Scoring ───────────────────────────────────────────────────────────────
+  const pStats   = matchStats.filter(r => r.player === player.name);
+  const tries    = pStats.reduce((s,r)=>s+(+r.tries||0),0);
+  const convMade = pStats.reduce((s,r)=>s+(+r.convMade||0),0);
   const convMissed= pStats.reduce((s,r)=>s+(+r.convMissed||0),0);
-  const penalties = pStats.reduce((s,r)=>s+(+r.penalties||0),0);
-  const points    = tries*5 + convMade*2 + penalties*3;
+  const penalties= pStats.reduce((s,r)=>s+(+r.penalties||0),0);
+  const points   = tries*5 + convMade*2 + penalties*3;
 
   return { friPlayed, friOut, friNS, friAvail, friPct, friAvailPct,
            sunPlayed, sunOut, sunNS, sunAvail, sunPct, sunAvailPct,
