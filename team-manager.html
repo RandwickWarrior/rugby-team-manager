@@ -339,6 +339,11 @@ let liveSquadHistory = { fri:{}, sun:{} };
 let squadHistoryLoaded = false;
 let squadHistoryLoading = false;
 
+// Training data from sheet — loaded lazily when stats tab is opened
+let liveTrainingData = {};
+let trainingDataLoaded = false;
+let trainingDataLoading = false;
+
 const TEAMS = {
   seahorses:  { label:'Coogee 11',           detail:'Friday nights',   histKey:'fri' },
   barbarians: { label:'Coogee Barbarians 11', detail:'Sunday mornings', histKey:'sun' }
@@ -354,7 +359,7 @@ const FIXTURES = {
     { round:3,  isoDate:'2026-05-08', opponent:'Rockdale',              date:'Fri 8 May',   venue:'C.A Redmond Oval',      time:'7:20pm',  result:'L 36–12' },
     { round:4,  isoDate:'2026-05-15', opponent:'Burraneer Blue',        date:'Fri 15 May',  venue:'Nagle Park Field 1',    time:'7:20pm',  result:'W 31–19' },
     { round:5,  isoDate:'2026-05-22', opponent:'Maroubra Missiles',     date:'Fri 22 May',  venue:'Nagle Park Field 2',    time:'5:30pm',  result:'L 36–12' },
-    { round:6,  isoDate:'2026-05-29', opponent:'Oatley',                date:'Fri 29 May',  venue:'Nagle Park Field 2',    time:'5:30pm',  result:'' },
+    { round:6,  isoDate:'2026-05-29', opponent:'Oatley',                date:'Fri 29 May',  venue:'Nagle Park Field 2',    time:'5:30pm',  result:'Washout' },
     { round:7,  isoDate:'2026-06-12', opponent:'Clovelly Eagles White', date:'Fri 12 Jun',  venue:'Nagle Park Field 1',    time:'8:00pm',  result:'' },
     { round:8,  isoDate:'2026-06-19', opponent:'TBC',                   date:'Fri 19 Jun',  venue:'Nagle Park Field 1',    time:'8:00pm',  result:'' },
   ],
@@ -364,7 +369,7 @@ const FIXTURES = {
     { round:3,  isoDate:'2026-05-10', opponent:'Wakehurst',             date:'Sun 10 May',  venue:'Wakehurst Rugby Park',  time:'9:50am',  result:'D 26–26' },
     { round:4,  isoDate:'2026-05-17', opponent:'Wahroonga Gold',        date:'Sun 17 May',  venue:'Nagle Park Field 1',    time:'9:10am',  result:'W 36–7' },
     { round:5,  isoDate:'2026-05-24', opponent:'Mosman Dolphins',        date:'Sun 24 May',  venue:'Nagle Park Field 2',    time:'9:00am',  result:'W 43–5' },
-    { round:6,  isoDate:'2026-05-31', opponent:'Hornsby Lions',          date:'Sun 31 May',  venue:'Mark Taylor Oval, Waitara', time:'9:30am', result:'' },
+    { round:6,  isoDate:'2026-05-31', opponent:'Hornsby Lions',          date:'Sun 31 May',  venue:'Mark Taylor Oval, Waitara', time:'9:30am', result:'Washout' },
   ]
 };
 
@@ -601,6 +606,15 @@ async function loadSquadHistory() {
   ]);
   squadHistoryLoaded=true; squadHistoryLoading=false;
   if(state.section==='squad'&&state.tab==='squad') render();
+}
+
+async function loadTrainingData() {
+  if(trainingDataLoaded||trainingDataLoading) return;
+  trainingDataLoading=true;
+  const data = await apiGet({ action:'getTraining' });
+  if(data?.success) liveTrainingData = data.sessions || {};
+  trainingDataLoaded=true; trainingDataLoading=false;
+  if(state.section==='squad'&&state.tab==='stats') render();
 }
 
 function buildSquad2(){
@@ -918,45 +932,82 @@ function buildField() {
 
 
 function calcStats(player) {
-  // Training: cols are 8 sessions, last 4 weeks = last 4 entries
-  // We track training as a separate array on each player if present, else derive from fri/sun
-  // Use the training attendance data embedded in rawSquad via tr array if present
-  // For now derive from the spreadsheet-sourced data we have
+  // ── Training ─────────────────────────────────────────────────────────────
+  // Use sheet data if available, else fall back to static tr[] array
+  const sheetDates = Object.keys(liveTrainingData).sort();
+  const hasSheetTr = sheetDates.some(d => liveTrainingData[d]?.records?.[player.name] !== undefined);
 
-  // Training data — pulled from spreadsheet (8 sessions)
-  // We store as p.tr = ['Yes','Yes','No',...] etc — check if it exists
-  const tr = player.tr || [];
-  const rainedOut = player.trRainedOut || []; // indices of rained-out sessions
-  const totalSessions = tr.filter((_,i) => !rainedOut.includes(i)).length;
-  const attended = tr.filter((v,i) => !rainedOut.includes(i) && v === 'Yes').length;
+  let totalSessions, attended, last4Pct;
+  if (hasSheetTr) {
+    const validDates = sheetDates.filter(d => {
+      const v = liveTrainingData[d]?.records?.[player.name];
+      return v !== undefined && v !== '' && v !== null;
+    });
+    totalSessions = validDates.length;
+    attended      = validDates.filter(d => liveTrainingData[d].records[player.name] === 'yes').length;
+    const last4   = validDates.slice(-4);
+    const l4att   = last4.filter(d => liveTrainingData[d].records[player.name] === 'yes').length;
+    last4Pct      = last4.length > 0 ? Math.round(l4att / last4.length * 100) : null;
+  } else {
+    const tr      = player.tr || [];
+    totalSessions = tr.filter(v => v !== '').length;
+    attended      = tr.filter(v => v === 'Yes').length;
+    const last4   = tr.filter(v => v !== '').slice(-4);
+    const l4att   = last4.filter(v => v === 'Yes').length;
+    last4Pct      = last4.length > 0 ? Math.round(l4att / last4.length * 100) : null;
+  }
 
-  // Last 4 weeks (last 4 non-rained-out sessions)
-  const last4Sessions = tr.map((v,i) => ({v,i})).filter(({i}) => !rainedOut.includes(i)).slice(-4);
-  const last4Attended = last4Sessions.filter(({v}) => v === 'Yes').length;
-  const last4Pct = last4Sessions.length > 0 ? Math.round(last4Attended / last4Sessions.length * 100) : null;
+  // ── Games played: static rounds 1–4 + live rounds 5+ ─────────────────────
+  const friS = player.friS || [];
+  const sunS = player.sunS || [];
 
-  // Use friS/sunS (spreadsheet-derived status) for accurate stats
-  const friS = player.friS || player.fri || [];
-  const sunS = player.sunS || player.sun || [];
+  let friStarted = friS.filter(v => v === 'Started').length;
+  let friSub     = friS.filter(v => v === 'Sub').length;
+  let friPlayed  = friStarted + friSub;
+  let friOut     = friS.filter(v => v === 'Unavailable').length;
+  let friNS      = friS.filter(v => v === 'Not Selected').length;
 
-  const friStarted  = friS.filter(v => v === 'Started').length;
-  const friSub      = friS.filter(v => v === 'Sub').length;
-  const friPlayed   = friStarted + friSub;
-  const friOut      = friS.filter(v => v === 'Unavailable').length;
-  const friNS       = friS.filter(v => v === 'Not Selected').length;
+  // Add rounds 5+ from live sheet data (skip washout rounds)
+  Object.entries(liveSquadHistory.fri).forEach(([round, roundData]) => {
+    const fix = FIXTURES.seahorses.find(f => f.round === +round);
+    if (fix?.result === 'Washout') return; // don't count washouts
+    const s = roundData[player.name] || '';
+    if (s === 'Started')         { friStarted++; friPlayed++; }
+    else if (s === 'Sub')        { friSub++;     friPlayed++; }
+    else if (s === 'Unavailable') friOut++;
+    else if (s === 'Not Selected') friNS++;
+  });
 
-  const sunStarted  = sunS.filter(v => v === 'Started').length;
-  const sunSub      = sunS.filter(v => v === 'Sub').length;
-  const sunPlayed   = sunStarted + sunSub;
-  const sunOut      = sunS.filter(v => v === 'Unavailable').length;
-  const sunNS       = sunS.filter(v => v === 'Not Selected').length;
+  let sunStarted = sunS.filter(v => v === 'Started').length;
+  let sunSub     = sunS.filter(v => v === 'Sub').length;
+  let sunPlayed  = sunStarted + sunSub;
+  let sunOut     = sunS.filter(v => v === 'Unavailable').length;
+  let sunNS      = sunS.filter(v => v === 'Not Selected').length;
 
-  return { attended, totalSessions, last4Attended, last4Total: last4Sessions.length, last4Pct,
+  Object.entries(liveSquadHistory.sun).forEach(([round, roundData]) => {
+    const fix = FIXTURES.barbarians.find(f => f.round === +round);
+    if (fix?.result === 'Washout') return;
+    const s = roundData[player.name] || '';
+    if (s === 'Started')          { sunStarted++; sunPlayed++; }
+    else if (s === 'Sub')         { sunSub++;     sunPlayed++; }
+    else if (s === 'Unavailable')  sunOut++;
+    else if (s === 'Not Selected') sunNS++;
+  });
+
+  const last4Total = hasSheetTr
+    ? Object.keys(liveTrainingData).filter(d => liveTrainingData[d]?.records?.[player.name] !== undefined && liveTrainingData[d]?.records?.[player.name] !== '').length >= 4 ? 4 : Object.keys(liveTrainingData).filter(d => liveTrainingData[d]?.records?.[player.name] !== undefined && liveTrainingData[d]?.records?.[player.name] !== '').length
+    : (player.tr||[]).filter(v=>v!=='').slice(-4).length;
+
+  return { attended, totalSessions, last4Pct, last4Total,
            friStarted, friSub, friPlayed, friOut, friNS,
            sunStarted, sunSub, sunPlayed, sunOut, sunNS };
 }
 
 function buildStats() {
+  // Trigger lazy loads for live data
+  if (!squadHistoryLoaded && !squadHistoryLoading) loadSquadHistory();
+  if (!trainingDataLoaded && !trainingDataLoading) loadTrainingData();
+
   const allPlayers = rawSquad.filter(p => !p.friIneligible || p.sunEligible !== 'No');
   const rows = allPlayers.map(p => ({ p, s: calcStats(p) }));
 
