@@ -1210,20 +1210,27 @@ function attachEvents(){
   if(sc) sc.addEventListener('click',()=>{state.tab='export';render();setTimeout(()=>document.getElementById('export-code')?.scrollIntoView({behavior:'smooth'}),100);});
   if(state.tab==='poll'){
     const roundSel=document.getElementById('m-round');
-    if(roundSel) roundSel.addEventListener('change',()=>{
+    if(roundSel) roundSel.addEventListener('change',async ()=>{
       const t=td();
       const val=roundSel.value;
       if(val==='custom'||val==='') {
         t.round=val||null;
-      } else {
-        const rnd=parseInt(val);
-        t.round=rnd;
-        const fixture=(FIXTURES[state.team]||[]).find(f=>f.round===rnd);
-        if(fixture){
-          t.match={opponent:fixture.opponent,date:fixture.date,venue:fixture.venue,time:fixture.time};
-        }
+        storageSave(); render(); return;
       }
+      const rnd=parseInt(val);
+      t.round=rnd;
+      const fixture=(FIXTURES[state.team]||[]).find(f=>f.round===rnd);
+      if(fixture){
+        t.match={opponent:fixture.opponent,date:fixture.date,venue:fixture.venue,time:fixture.time};
+      }
+      // Re-sync this round's real data from the sheet so any round can be reviewed/corrected
+      t.pollResults={}; t.teamSlots={};
       storageSave(); render();
+      showToast('Loading Round '+rnd+'…');
+      const r = await syncResponsesFromSheet();
+      const tm = await loadTeamFromSheet();
+      savedState=toCode(); render();
+      showToast(r||tm ? 'Round '+rnd+' loaded ✓' : 'Round '+rnd+' — no saved data');
     });
     ['opponent','date','venue','time'].forEach(f=>{
       const el=document.getElementById('m-'+f);
