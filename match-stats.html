@@ -102,6 +102,29 @@
 
   .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#1c1c1e; color:#fff; padding:10px 22px; border-radius:20px; font-size:14px; opacity:0; transition:opacity 0.25s; pointer-events:none; z-index:999; white-space:nowrap; }
   .toast.show { opacity:1; }
+
+  /* Tabs */
+  .tabs { display:flex; background:rgba(255,255,255,0.04); border-radius:12px; padding:3px; gap:2px; margin-bottom:1.5rem; }
+  .tab-btn { flex:1; padding:10px 4px; font-size:13px; font-weight:600; cursor:pointer; border:none; background:none; color:var(--muted); border-radius:9px; transition:all 0.15s; font-family:'DM Sans',sans-serif; }
+  .tab-btn.active { background:rgba(0,201,167,0.15); color:var(--teal); }
+
+  /* Season view */
+  .summary-card { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:6px 14px; }
+  .summary-row { display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:7px 0; }
+  .summary-row + .summary-row { border-top:1px solid var(--border); }
+  .summary-key { color:var(--muted); }
+  .summary-val { font-weight:600; }
+  .pill { font-size:11px; padding:2px 8px; border-radius:6px; font-weight:700; }
+  .pill-w { background:rgba(52,199,89,0.15); color:#34c759; }
+  .pill-l { background:rgba(255,59,48,0.15); color:#ff3b30; }
+  .pill-d { background:rgba(245,166,35,0.15); color:#f5a623; }
+  .pill-wo { background:rgba(255,255,255,0.08); color:var(--muted); }
+
+  .report-table { width:100%; border-collapse:collapse; font-size:13px; background:var(--card); }
+  .report-table th { background:rgba(255,255,255,0.04); padding:9px 10px; text-align:center; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em; white-space:nowrap; }
+  .report-table td { padding:9px 10px; text-align:center; border-top:1px solid var(--border); white-space:nowrap; }
+  .report-table tbody tr:nth-child(odd) td { background:rgba(255,255,255,0.015); }
+  .loading { text-align:center; padding:3rem; color:var(--muted); font-size:14px; }
 </style>
 </head>
 <body>
@@ -113,6 +136,17 @@
     <h1>Match <span>Stats</span></h1>
     <p class="subtitle">Coogee Seahorses JRUFC · Manager entry</p>
   </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="season">Season</button>
+    <button class="tab-btn" data-tab="enter">Enter Match Stats</button>
+  </div>
+
+  <!-- Season tab -->
+  <div id="season-tab"><div class="loading">Loading season data…</div></div>
+
+  <!-- Enter Match Stats tab -->
+  <div id="enter-tab" style="display:none">
 
   <div id="main-form">
 
@@ -190,6 +224,8 @@
     </div>
     <button class="another-btn" id="another-btn">Enter another match</button>
   </div>
+
+  </div><!-- /enter-tab -->
 
 </div>
 <script>
@@ -516,9 +552,141 @@ document.getElementById('another-btn').addEventListener('click', () => {
   buildPlayerForm(); updateTotals();
 });
 
+// ── Season tab ────────────────────────────────────────────────────────────
+let seasonMatchStats = [];
+let seasonLoaded = false;
+
+async function loadSeasonData() {
+  try {
+    const res = await fetch(APPS_SCRIPT_URL + '?action=getMatchStats');
+    const data = await res.json();
+    if (data.success) seasonMatchStats = data.records || [];
+  } catch(e) { /* offline — show fixtures only */ }
+  seasonLoaded = true;
+  renderSeason();
+}
+
+function resultPill(r) {
+  if (!r) return '';
+  if (r === 'Washout') return '<span class="pill pill-wo">Washout</span>';
+  const cls = r.startsWith('W')?'pill-w':r.startsWith('L')?'pill-l':'pill-d';
+  return `<span class="pill ${cls}">${r}</span>`;
+}
+
+function fixtureRows(fixtures) {
+  return fixtures.map(f=>`
+    <div class="summary-row">
+      <span class="summary-key">R${f.round} vs ${f.opponent}</span>
+      <span class="summary-val">${resultPill(f.result)||'<span style="color:var(--muted);font-weight:400">Upcoming</span>'}</span>
+    </div>`).join('');
+}
+
+function renderSeason() {
+  const el = document.getElementById('season-tab');
+
+  // Aggregate scoring per player
+  const scorerMap = {};
+  seasonMatchStats.forEach(r => {
+    if (!scorerMap[r.player]) scorerMap[r.player] = {tries:0,convMade:0,convMissed:0,penalties:0,points:0};
+    scorerMap[r.player].tries      += +r.tries||0;
+    scorerMap[r.player].convMade   += +r.convMade||0;
+    scorerMap[r.player].convMissed += +r.convMissed||0;
+    scorerMap[r.player].penalties  += +r.penalties||0;
+    scorerMap[r.player].points     += +r.points||0;
+  });
+
+  // Top 10 scorers
+  const topScorers = Object.entries(scorerMap)
+    .sort((a,b)=> b[1].points-a[1].points || b[1].tries-a[1].tries)
+    .slice(0,10);
+
+  const scorersSection = topScorers.length ? `
+    <div class="section-label" style="margin-top:1.25rem">Top 10 scorers</div>
+    <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border)">
+    <table class="report-table">
+      <thead><tr>
+        <th style="text-align:left">#</th><th style="text-align:left">Player</th>
+        <th>T</th><th>C</th><th>P</th><th>Pts</th>
+      </tr></thead>
+      <tbody>
+        ${topScorers.map(([name,s],i)=>`
+          <tr>
+            <td style="color:var(--muted)">${i+1}</td>
+            <td style="text-align:left;font-weight:600">${name}</td>
+            <td>${s.tries||'·'}</td>
+            <td>${s.convMade||'·'}</td>
+            <td>${s.penalties||'·'}</td>
+            <td style="color:var(--teal);font-weight:700">${s.points}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">T = tries · C = conversions · P = penalties · Pts = total points</div>
+    ` : '';
+
+  // Kickers
+  const kickers = Object.entries(scorerMap)
+    .filter(([,s]) => s.convMade+s.convMissed+s.penalties > 0)
+    .map(([name,s]) => {
+      const convAtt = s.convMade + s.convMissed;
+      const convPct = convAtt > 0 ? Math.round(s.convMade/convAtt*100) : null;
+      const kickPts = s.convMade*2 + s.penalties*3;
+      return { name, convMade:s.convMade, convAtt, convPct, penalties:s.penalties, kickPts };
+    })
+    .sort((a,b)=> b.kickPts-a.kickPts);
+
+  const kickersSection = kickers.length ? `
+    <div class="section-label" style="margin-top:1.5rem">Kickers</div>
+    <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border)">
+    <table class="report-table">
+      <thead><tr>
+        <th style="text-align:left">Player</th>
+        <th>Conv</th><th>Pen</th><th>Att</th><th>%</th><th>Pts</th>
+      </tr></thead>
+      <tbody>
+        ${kickers.map(k=>{
+          const pc = k.convPct===null?'var(--muted)':k.convPct>=75?'#34c759':k.convPct>=50?'#f5a623':'#ff3b30';
+          return `
+          <tr>
+            <td style="text-align:left;font-weight:600">${k.name}</td>
+            <td>${k.convMade}</td>
+            <td>${k.penalties||'·'}</td>
+            <td>${k.convAtt}</td>
+            <td style="color:${pc};font-weight:600">${k.convPct!==null?k.convPct+'%':'—'}</td>
+            <td style="color:var(--teal);font-weight:700">${k.kickPts}</td>
+          </tr>`;}).join('')}
+      </tbody>
+    </table>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">Conv = conversions made · Att = attempts · % = conversion success · Pts = kicking points (conv×2 + pen×3)</div>
+    ` : '';
+
+  el.innerHTML = `
+    <div class="section-label">Coogee 11 — Friday nights</div>
+    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(FIXTURES.seahorses)}</div>
+    <div class="section-label">Coogee Barbarians 11 — Sunday mornings</div>
+    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(FIXTURES.barbarians)}</div>
+    ${scorersSection}
+    ${kickersSection}
+    ${!seasonMatchStats.length && seasonLoaded ? '<div style="font-size:12px;color:var(--muted);margin-top:1rem;text-align:center">No scoring data yet — enter match stats to populate.</div>' : ''}`;
+}
+
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('season-tab').style.display = tab==='season' ? 'block' : 'none';
+    document.getElementById('enter-tab').style.display  = tab==='enter'  ? 'block' : 'none';
+    if (tab==='season' && !seasonLoaded) loadSeasonData();
+  });
+});
+
 // Init
 populateRounds();
 buildPlayerForm();
+loadSeasonData(); // Season is the default tab
 </script>
 </body>
 </html>
