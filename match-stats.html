@@ -79,6 +79,7 @@
   .step-val.nonzero-conv { color:var(--conv); }
   .step-val.nonzero-pen  { color:var(--pen); }
   .step-val.nonzero-miss { color:#e25555; }
+  .step-val.nonzero-neg  { color:#ff3b30; }
 
   .stat-legend { display:flex; gap:14px; flex-wrap:wrap; font-size:11px; color:var(--muted); margin-bottom:1rem; }
   .stat-legend span { display:flex; align-items:center; gap:4px; }
@@ -263,7 +264,7 @@ const FIXTURES = {
 
 // All players alphabetical
 const PLAYERS = [
-  {name:'Aiden Schultz',    group:'Back'},    {name:'Archer Price',     group:'Back'},
+  {name:'Aidan Schulz',    group:'Back'},    {name:'Archer Price',     group:'Back'},
   {name:'Beau Hack',        group:'Back'},    {name:'Cade Forshaw',     group:'Back'},
   {name:'Edward Macassey',  group:'Back'},    {name:'Elliot Dean',      group:'Forward'},
   {name:'Freddie Kirrane',  group:'Back'},    {name:'Henry Scott',      group:'Forward'},
@@ -337,7 +338,7 @@ function buildPlayerForm() {
       const player = btn.dataset.player;
       const field  = btn.dataset.field;
       const dir    = parseInt(btn.dataset.dir);
-      stats[player][field] = Math.max(0, Math.min(15, stats[player][field] + dir));
+      stats[player][field] = Math.max(-15, Math.min(15, stats[player][field] + dir));
       updatePlayerCard(player);
       updateTotals();
     });
@@ -351,7 +352,7 @@ function buildStepper(player, field, label, colorClass) {
       <div class="stat-field-label">${label}</div>
       <div class="stat-stepper">
         <button class="step-btn" data-player="${player}" data-field="${field}" data-dir="-1">−</button>
-        <span class="step-val ${val>0?'nonzero-'+colorClass:''}" id="sv-${player.replace(/\s+/g,'_')}-${field}">${val}</span>
+        <span class="step-val ${val<0?'nonzero-neg':val>0?'nonzero-'+colorClass:''}" id="sv-${player.replace(/\s+/g,'_')}-${field}">${val}</span>
         <button class="step-btn" data-player="${player}" data-field="${field}" data-dir="1">+</button>
       </div>
     </div>`;
@@ -374,7 +375,7 @@ function updatePlayerCard(playerName) {
     const el = document.getElementById(`sv-${key}-${f}`);
     if (el) {
       el.textContent = s[f];
-      el.className = 'step-val ' + (s[f]>0?'nonzero-'+colors[i]:'');
+      el.className = 'step-val ' + (s[f]<0?'nonzero-neg':s[f]>0?'nonzero-'+colors[i]:'');
     }
   });
 }
