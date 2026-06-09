@@ -118,6 +118,21 @@
   .report-table td { padding:9px 10px; text-align:center; border-top:1px solid var(--border); white-space:nowrap; }
   .report-table tbody tr:nth-child(odd) td { background:rgba(255,255,255,0.015); }
 
+  /* Availability grid */
+  .grid-table { width:100%; border-collapse:collapse; font-size:12px; background:var(--card); }
+  .grid-table th { background:rgba(255,255,255,0.05); padding:7px 6px; text-align:center; font-size:10px; font-weight:600; color:var(--muted); white-space:nowrap; }
+  .grid-table th.g-name { text-align:left; }
+  .grid-table td { padding:7px 6px; text-align:center; border-top:1px solid var(--border); font-weight:700; }
+  .grid-table td.g-name { text-align:left; font-weight:600; white-space:nowrap; color:var(--white); }
+  .grid-table .g-grp td { background:rgba(0,201,167,0.08); text-align:left; font-size:10px; font-weight:700; color:var(--teal); text-transform:uppercase; letter-spacing:0.05em; padding:5px 8px; }
+  .g-played { color:#34c759; }
+  .g-avail  { color:#f5a623; }
+  .g-out    { color:#ff3b30; }
+  .g-none   { color:rgba(255,255,255,0.18); }
+  .grid-legend { display:flex; gap:14px; flex-wrap:wrap; font-size:11px; color:var(--muted); margin-bottom:1rem; }
+  .grid-legend span { display:flex; align-items:center; gap:5px; }
+  .grid-legend b { font-size:13px; }
+
   /* Sort/filter bar */
   .filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem; align-items:center; }
   .filter-label { font-size:12px; color:var(--muted); }
@@ -185,6 +200,7 @@
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="season">Season</button>
+    <button class="tab-btn" data-tab="grid">Grid</button>
     <button class="tab-btn" data-tab="training">Training</button>
     <button class="tab-btn" data-tab="players">Players</button>
   </div>
@@ -269,6 +285,12 @@ const SQUAD = [
   {name:'Aidan Schulz',    jersey:null,group:'Back',   p1:'Left Wing',
     friS:['Unavailable','Started','Started','Started'], sunS:['Unavailable','Started','Started','Started'],
     fri:['Out','In','In','In'], sun:['Out','In','In','In'], tr:['No','Yes','No','Yes','No','Yes','No','Yes']},
+  {name:'Xavier Saunders', jersey:null,group:'Back',   p1:'Left Wing',
+    friS:[], sunS:['Started','Started','Started','Not Selected'],
+    fri:[], sun:['In','In','In','Out'], tr:[]},
+  {name:'Cade Forshaw',    jersey:null,group:'Back',   p1:'No Preference',
+    friS:[], sunS:['','','Not Selected','Started'],
+    fri:[], sun:['','','','In'], tr:[]},
 ];
 
 const FRI_ROUNDS = 5; // played rounds (R6 was washout)
@@ -434,6 +456,7 @@ function renderTab(tab) {
   const content = document.getElementById('tab-content');
   if (tab==='players') content.innerHTML = buildPlayersTab();
   else if (tab==='training') content.innerHTML = buildTrainingTab();
+  else if (tab==='grid') content.innerHTML = buildGridTab();
   else content.innerHTML = buildSeasonTab();
   attachTabEvents();
 }
@@ -790,6 +813,79 @@ function buildSeasonTab() {
     <div class="section-label">Coogee Barbarians 11 — Sunday mornings</div>
     <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(sunFixtures)}</div>
     ${scoringSection}`;
+}
+
+// ── Grid tab — played / available / not available, by round ──────────────────
+function buildGridTab() {
+  // Rounds that have occurred (played or washout) per team
+  const FRI_FIX = [
+    {r:1,res:'L 41–12'},{r:2,res:'W 36–12'},{r:3,res:'L 36–12'},
+    {r:4,res:'W 31–19'},{r:5,res:'L 36–12'},{r:6,res:'Washout'}
+  ];
+  const SUN_FIX = [
+    {r:1,res:'W 26–5'},{r:2,res:'L 14–29'},{r:3,res:'D 26–26'},
+    {r:4,res:'W 36–7'},{r:5,res:'W 43–5'},{r:6,res:'Washout'}
+  ];
+
+  // Map a player's round status to a coloured cell
+  function statusCell(status, washout) {
+    if (status==='Started' || status==='Sub') {
+      return washout
+        ? { t:'A', cls:'g-avail',  title:'Selected — washout (no game)' }
+        : { t:'✓', cls:'g-played', title:'Played' };
+    }
+    if (status==='Not Selected') return { t:'A', cls:'g-avail', title:'Available, not selected' };
+    if (status==='Unavailable')  return { t:'✗', cls:'g-out',   title:'Not available' };
+    return { t:'·', cls:'g-none', title:'No response' };
+  }
+
+  function teamTable(label, teamName, fixtures) {
+    function rowsFor(group) {
+      return SQUAD.filter(p => p.group === group)
+        .sort((a,b) => a.name.localeCompare(b.name))
+        .map(p => {
+          const cells = fixtures.map(f => {
+            const slots = liveTeamSlots[`${f.r}|${teamName}`];
+            const resp  = liveResponses[`${f.r}|${teamName}`];
+            return { status: deriveStatus(p.name, slots, resp), wo: f.res === 'Washout' };
+          });
+          if (!cells.some(c => c.status !== '')) return ''; // no data for this player/team
+          const tds = cells.map(c => {
+            const cell = statusCell(c.status, c.wo);
+            return `<td class="${cell.cls}" title="${cell.title}">${cell.t}</td>`;
+          }).join('');
+          return `<tr><td class="g-name">${p.name}</td>${tds}</tr>`;
+        }).filter(Boolean).join('');
+    }
+    const headers = fixtures.map(f =>
+      `<th title="${f.res}">R${f.r}${f.res==='Washout'?'*':''}</th>`).join('');
+    const fwd = rowsFor('Forward'), back = rowsFor('Back');
+    return `
+      <div class="section-label">${label}</div>
+      <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border);margin-bottom:1.5rem">
+      <table class="grid-table">
+        <thead><tr><th class="g-name">Player</th>${headers}</tr></thead>
+        <tbody>
+          ${fwd ? `<tr class="g-grp"><td colspan="${fixtures.length+1}">Forwards</td></tr>${fwd}` : ''}
+          ${back ? `<tr class="g-grp"><td colspan="${fixtures.length+1}">Backs</td></tr>${back}` : ''}
+        </tbody>
+      </table>
+      </div>`;
+  }
+
+  const legend = `
+    <div class="grid-legend">
+      <span><b class="g-played">✓</b> Played</span>
+      <span><b class="g-avail">A</b> Available, didn't play</span>
+      <span><b class="g-out">✗</b> Not available</span>
+      <span><b class="g-none">·</b> No response</span>
+      <span>R6* = washout</span>
+    </div>`;
+
+  return `<div class="section-label">Availability &amp; selection grid</div>
+    ${legend}
+    ${teamTable('Coogee 11 — Friday', 'Coogee 11', FRI_FIX)}
+    ${teamTable('Coogee Barbarians 11 — Sunday', 'Coogee Barbarians 11', SUN_FIX)}`;
 }
 
 function attachTabEvents() {
