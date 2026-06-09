@@ -497,7 +497,8 @@ analyzeBtn.addEventListener('click', async () => {
         action: 'analyzeScreenshot',
         imagesBase64: screenshotImages,            // new: array of images
         imageBase64: screenshotImages[0],          // back-compat: first image
-        team: currentTeam === 'seahorses' ? 'Coogee 11' : 'Coogee Barbarians 11'
+        team: currentTeam === 'seahorses' ? 'Coogee 11' : 'Coogee Barbarians 11',
+        roster: PLAYERS.map(p => p.name)           // exact squad names for matching
       })
     });
     const data = await res.json();
