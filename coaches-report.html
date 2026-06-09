@@ -180,9 +180,9 @@
   </div>
 
   <div class="tabs">
-    <button class="tab-btn active" data-tab="players">Players</button>
+    <button class="tab-btn active" data-tab="season">Season</button>
     <button class="tab-btn" data-tab="training">Training</button>
-    <button class="tab-btn" data-tab="season">Season</button>
+    <button class="tab-btn" data-tab="players">Players</button>
   </div>
 
   <div id="tab-content"><div class="loading">Loading…</div></div>
@@ -320,7 +320,7 @@ let liveTeamSlots = {}; // { 'round|team': { slotNum: playerName } }
 let trainingData  = {}; // { date: { sessionLabel, records: { player: status } } }
 let matchStats    = []; // [ { round, team, player, tries, convMade, convMissed, penalties, points } ]
 let lastSyncTime  = null;
-let activeTab     = 'players';
+let activeTab     = 'season';
 let sortBy        = 'name';
 
 function showToast(msg) {
