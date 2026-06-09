@@ -129,6 +129,11 @@
   .g-avail  { color:#f5a623; }
   .g-out    { color:#ff3b30; }
   .g-none   { color:rgba(255,255,255,0.18); }
+  .grid-table td.g-tot-p { color:#34c759; font-weight:700; border-left:1px solid var(--border); }
+  .grid-table td.g-tot-a { color:#f5a623; font-weight:700; }
+  .grid-table th.g-tot { border-left:1px solid var(--border); }
+  .grid-table .g-totrow td { border-top:2px solid rgba(255,255,255,0.18); background:rgba(255,255,255,0.03); font-weight:700; }
+  .grid-table .g-totrow td.g-name { color:var(--muted); font-size:11px; }
   .grid-legend { display:flex; gap:14px; flex-wrap:wrap; font-size:11px; color:var(--muted); margin-bottom:1rem; }
   .grid-legend span { display:flex; align-items:center; gap:5px; }
   .grid-legend b { font-size:13px; }
@@ -839,35 +844,68 @@ function buildGridTab() {
     return { t:'·', cls:'g-none', title:'No response' };
   }
 
+  function classify(status, wo) {
+    if (status==='Started' || status==='Sub') return wo ? 'avail' : 'played';
+    if (status==='Not Selected') return 'avail';
+    if (status==='Unavailable')  return 'out';
+    return 'none';
+  }
+
   function teamTable(label, teamName, fixtures) {
-    function rowsFor(group) {
-      return SQUAD.filter(p => p.group === group)
-        .sort((a,b) => a.name.localeCompare(b.name))
-        .map(p => {
-          const cells = fixtures.map(f => {
-            const slots = liveTeamSlots[`${f.r}|${teamName}`];
-            const resp  = liveResponses[`${f.r}|${teamName}`];
-            return { status: deriveStatus(p.name, slots, resp), wo: f.res === 'Washout' };
-          });
-          if (!cells.some(c => c.status !== '')) return ''; // no data for this player/team
-          const tds = cells.map(c => {
-            const cell = statusCell(c.status, c.wo);
-            return `<td class="${cell.cls}" title="${cell.title}">${cell.t}</td>`;
-          }).join('');
-          return `<tr><td class="g-name">${p.name}</td>${tds}</tr>`;
-        }).filter(Boolean).join('');
+    // Gather players who have any data for this team
+    const rows = [];
+    SQUAD.forEach(p => {
+      const cells = fixtures.map(f => {
+        const slots = liveTeamSlots[`${f.r}|${teamName}`];
+        const resp  = liveResponses[`${f.r}|${teamName}`];
+        return { status: deriveStatus(p.name, slots, resp), wo: f.res === 'Washout' };
+      });
+      if (cells.some(c => c.status !== '')) rows.push({ p, cells });
+    });
+
+    // Column totals
+    const colPlayed = fixtures.map(()=>0);
+    const colAvail  = fixtures.map(()=>0);
+    rows.forEach(({cells}) => cells.forEach((c,i) => {
+      const k = classify(c.status, c.wo);
+      if (k==='played') colPlayed[i]++; else if (k==='avail') colAvail[i]++;
+    }));
+
+    function rowHtml({p, cells}) {
+      let played=0, avail=0;
+      const tds = cells.map(c => {
+        const k = classify(c.status, c.wo);
+        if (k==='played') played++; else if (k==='avail') avail++;
+        const cell = statusCell(c.status, c.wo);
+        return `<td class="${cell.cls}" title="${cell.title}">${cell.t}</td>`;
+      }).join('');
+      return `<tr><td class="g-name">${p.name}</td>${tds}<td class="g-tot-p">${played||'·'}</td><td class="g-tot-a">${avail||'·'}</td></tr>`;
     }
+    function groupRows(group) {
+      return rows.filter(x => x.p.group === group)
+        .sort((a,b) => a.p.name.localeCompare(b.p.name))
+        .map(rowHtml).join('');
+    }
+
     const headers = fixtures.map(f =>
       `<th title="${f.res}">R${f.r}${f.res==='Washout'?'*':''}</th>`).join('');
-    const fwd = rowsFor('Forward'), back = rowsFor('Back');
+    const fwd = groupRows('Forward'), back = groupRows('Back');
+    const grandP = colPlayed.reduce((a,b)=>a+b,0);
+    const grandA = colAvail.reduce((a,b)=>a+b,0);
+    const span = fixtures.length + 3;
+    const totPlayed = `<tr class="g-totrow"><td class="g-name">Played</td>${colPlayed.map(n=>`<td class="g-played">${n||'·'}</td>`).join('')}<td class="g-played">${grandP}</td><td></td></tr>`;
+    const totAvail  = `<tr class="g-totrow"><td class="g-name">Avail</td>${colAvail.map(n=>`<td class="g-avail">${n||'·'}</td>`).join('')}<td></td><td class="g-avail">${grandA}</td></tr>`;
+
     return `
       <div class="section-label">${label}</div>
       <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border);margin-bottom:1.5rem">
       <table class="grid-table">
-        <thead><tr><th class="g-name">Player</th>${headers}</tr></thead>
+        <thead><tr><th class="g-name">Player</th>${headers}<th class="g-tot" title="Games played">P</th><th title="Available, not played">A</th></tr></thead>
         <tbody>
-          ${fwd ? `<tr class="g-grp"><td colspan="${fixtures.length+1}">Forwards</td></tr>${fwd}` : ''}
-          ${back ? `<tr class="g-grp"><td colspan="${fixtures.length+1}">Backs</td></tr>${back}` : ''}
+          ${fwd ? `<tr class="g-grp"><td colspan="${span}">Forwards</td></tr>${fwd}` : ''}
+          ${back ? `<tr class="g-grp"><td colspan="${span}">Backs</td></tr>${back}` : ''}
+          ${totPlayed}
+          ${totAvail}
         </tbody>
       </table>
       </div>`;
@@ -880,6 +918,7 @@ function buildGridTab() {
       <span><b class="g-out">✗</b> Not available</span>
       <span><b class="g-none">·</b> No response</span>
       <span>R6* = washout</span>
+      <span><b class="g-played">P</b>/<b class="g-avail">A</b> row &amp; column = totals</span>
     </div>`;
 
   return `<div class="section-label">Availability &amp; selection grid</div>
