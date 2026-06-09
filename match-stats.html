@@ -548,9 +548,21 @@ function applyExtractedStats(extracted) {
 
 function findPlayer(name) {
   if (!name) return null;
-  const lower = name.toLowerCase();
-  const match = PLAYERS.find(p => p.name.toLowerCase().includes(lower) || lower.includes(p.name.split(' ')[0].toLowerCase()));
-  return match ? match.name : null;
+  const lower = name.toLowerCase().trim();
+  const surname = lower.split(' ').slice(-1)[0];
+  const first   = lower.split(' ')[0];
+  // 1. Exact full-name match (preferred — AI returns roster names)
+  let m = PLAYERS.find(p => p.name.toLowerCase() === lower);
+  if (m) return m.name;
+  // 2. Full name contained either direction (handles trailing minute text etc.)
+  m = PLAYERS.find(p => lower.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(lower));
+  if (m) return m.name;
+  // 3. Surname match — distinguishes players who share a first name
+  m = PLAYERS.find(p => p.name.toLowerCase().split(' ').slice(-1)[0] === surname);
+  if (m) return m.name;
+  // 4. First-name fallback (last resort, only if surname didn't resolve)
+  m = PLAYERS.find(p => p.name.toLowerCase().split(' ')[0] === first);
+  return m ? m.name : null;
 }
 
 // Submit
