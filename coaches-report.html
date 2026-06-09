@@ -109,6 +109,12 @@
   .dot-unknown { background:rgba(255,255,255,0.1); }
   .tpc-pct { font-size:12px; font-weight:700; }
 
+  /* Report tables (season tab) */
+  .report-table { width:100%; border-collapse:collapse; font-size:13px; background:var(--card); }
+  .report-table th { background:rgba(255,255,255,0.04); padding:9px 10px; text-align:center; font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em; white-space:nowrap; }
+  .report-table td { padding:9px 10px; text-align:center; border-top:1px solid var(--border); white-space:nowrap; }
+  .report-table tbody tr:nth-child(odd) td { background:rgba(255,255,255,0.015); }
+
   /* Sort/filter bar */
   .filter-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem; align-items:center; }
   .filter-label { font-size:12px; color:var(--muted); }
@@ -692,31 +698,85 @@ function buildSeasonTab() {
       </div>`).join('');
   }
 
-  // Top scorers
+  // Aggregate scoring per player from matchStats
   const scorerMap = {};
   matchStats.forEach(r => {
-    if (!scorerMap[r.player]) scorerMap[r.player] = {tries:0,convMade:0,penalties:0,points:0};
-    scorerMap[r.player].tries     += +r.tries||0;
-    scorerMap[r.player].convMade  += +r.convMade||0;
-    scorerMap[r.player].penalties += +r.penalties||0;
-    scorerMap[r.player].points    += +r.points||0;
+    if (!scorerMap[r.player]) scorerMap[r.player] = {tries:0,convMade:0,convMissed:0,penalties:0,points:0};
+    scorerMap[r.player].tries      += +r.tries||0;
+    scorerMap[r.player].convMade   += +r.convMade||0;
+    scorerMap[r.player].convMissed += +r.convMissed||0;
+    scorerMap[r.player].penalties  += +r.penalties||0;
+    scorerMap[r.player].points     += +r.points||0;
   });
-  const topScorers = Object.entries(scorerMap)
-    .sort((a,b)=>b[1].points-a[1].points)
-    .slice(0,5);
 
-  const scoringSection = topScorers.length ? `
-    <div class="section-label" style="margin-top:1.25rem">Top scorers</div>
-    <div class="summary-card">
-      ${topScorers.map(([name,s],i)=>`
-        <div class="summary-row">
-          <span class="summary-key">${i+1}. ${name}</span>
-          <span class="summary-val" style="color:var(--teal)">${s.points}pts</span>
-        </div>
-        <div style="font-size:11px;color:var(--muted);padding:0 0 6px 0">
-          ${s.tries?s.tries+' tries ':''}${s.convMade?s.convMade+' conv ':''}${s.penalties?s.penalties+' pen':''}
-        </div>`).join('')}
-    </div>` : '';
+  // ── Top 10 scorers ──────────────────────────────────────────────────────
+  const topScorers = Object.entries(scorerMap)
+    .sort((a,b)=> b[1].points-a[1].points || b[1].tries-a[1].tries)
+    .slice(0,10);
+
+  const scorersSection = topScorers.length ? `
+    <div class="section-label" style="margin-top:1.25rem">Top 10 scorers</div>
+    <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border)">
+    <table class="report-table">
+      <thead><tr>
+        <th style="text-align:left">#</th>
+        <th style="text-align:left">Player</th>
+        <th>T</th><th>C</th><th>P</th><th>Pts</th>
+      </tr></thead>
+      <tbody>
+        ${topScorers.map(([name,s],i)=>`
+          <tr>
+            <td style="color:var(--muted)">${i+1}</td>
+            <td style="text-align:left;font-weight:600">${name}</td>
+            <td>${s.tries||'·'}</td>
+            <td>${s.convMade||'·'}</td>
+            <td>${s.penalties||'·'}</td>
+            <td style="color:var(--teal);font-weight:700">${s.points}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">T = tries · C = conversions · P = penalties · Pts = total points</div>
+    ` : '';
+
+  // ── Kickers ─────────────────────────────────────────────────────────────
+  const kickers = Object.entries(scorerMap)
+    .filter(([,s]) => s.convMade+s.convMissed+s.penalties > 0)
+    .map(([name,s]) => {
+      const convAtt = s.convMade + s.convMissed;
+      const convPct = convAtt > 0 ? Math.round(s.convMade/convAtt*100) : null;
+      const kickPts = s.convMade*2 + s.penalties*3;
+      return { name, convMade:s.convMade, convAtt, convPct, penalties:s.penalties, kickPts };
+    })
+    .sort((a,b)=> b.kickPts-a.kickPts);
+
+  const kickersSection = kickers.length ? `
+    <div class="section-label" style="margin-top:1.5rem">Kickers</div>
+    <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border)">
+    <table class="report-table">
+      <thead><tr>
+        <th style="text-align:left">Player</th>
+        <th>Conv</th><th>Pen</th><th>Att</th><th>%</th><th>Pts</th>
+      </tr></thead>
+      <tbody>
+        ${kickers.map(k=>{
+          const pctColor = k.convPct===null?'var(--muted)':k.convPct>=75?'var(--green)':k.convPct>=50?'var(--orange)':'var(--red)';
+          return `
+          <tr>
+            <td style="text-align:left;font-weight:600">${k.name}</td>
+            <td>${k.convMade}</td>
+            <td>${k.penalties||'·'}</td>
+            <td>${k.convAtt}</td>
+            <td style="color:${pctColor};font-weight:600">${k.convPct!==null?k.convPct+'%':'—'}</td>
+            <td style="color:var(--teal);font-weight:700">${k.kickPts}</td>
+          </tr>`;}).join('')}
+      </tbody>
+    </table>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">Conv = conversions made · Att = conversion attempts · % = conversion success · Pts = kicking points (conv×2 + pen×3)</div>
+    ` : '';
+
+  const scoringSection = scorersSection + kickersSection;
 
   return `
     <div class="section-label">Coogee 11 — Friday nights</div>
