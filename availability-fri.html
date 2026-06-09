@@ -285,8 +285,10 @@
     const availability = selectedAvailability;
     const ride = document.getElementById('needs-ride').value === 'yes';
     const notes = document.getElementById('notes').value.trim();
-    responses = responses.filter(r => r.player !== player);
-    const response = { player, availability, ride, notes, time: new Date().toLocaleTimeString() };
+    const curRound = nextFixture ? nextFixture.round : null;
+    // Dedupe by player AND round so each round keeps its own answers
+    responses = responses.filter(r => !(r.player === player && (r.round ?? null) === curRound));
+    const response = { player, availability, ride, notes, round: curRound, time: new Date().toLocaleTimeString() };
     responses.push(response);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(responses));
     if (nextFixture) {
@@ -315,15 +317,24 @@
     submitBtn.disabled = true; notesLabel.textContent = 'Step 4 — Anything else?';
   });
 
+  // Responses for the round currently being collected (this device only)
+  function currentRoundResponses() {
+    const curRound = nextFixture ? nextFixture.round : null;
+    return responses.filter(r => (r.round ?? null) === curRound);
+  }
+
   function renderSavedPanel() {
     const panel = document.getElementById('saved-panel');
-    if (responses.length === 0) { panel.style.display = 'none'; return; }
+    const list = currentRoundResponses();
+    if (list.length === 0) { panel.style.display = 'none'; return; }
     panel.style.display = 'block';
-    const yes = responses.filter(r=>r.availability==='Yes, count me in').length;
-    const no  = responses.filter(r=>r.availability==="Sorry, can't make it").length;
-    const maybe = responses.filter(r=>r.availability==='Not sure yet').length;
+    const titleEl = document.querySelector('.saved-title');
+    if (titleEl && nextFixture) titleEl.textContent = `Friday R${nextFixture.round} responses (this device)`;
+    const yes = list.filter(r=>r.availability==='Yes, count me in').length;
+    const no  = list.filter(r=>r.availability==="Sorry, can't make it").length;
+    const maybe = list.filter(r=>r.availability==='Not sure yet').length;
     document.getElementById('saved-count').textContent = `${yes} available · ${no} out · ${maybe} unsure`;
-    document.getElementById('saved-list').innerHTML = responses.map(r => {
+    document.getElementById('saved-list').innerHTML = list.map(r => {
       const sc = r.availability==='Yes, count me in'?'yes':r.availability==="Sorry, can't make it"?'no':'maybe';
       const sl = r.availability==='Yes, count me in'?'In':r.availability==="Sorry, can't make it"?'Out':'Maybe';
       return `<div class="saved-row"><span class="saved-name">${r.player}</span>${r.ride?'<span style="font-size:14px">🚗</span>':''}<span class="saved-status status-${sc}">${sl}</span></div>`;
@@ -331,7 +342,7 @@
   }
 
   document.getElementById('copy-responses').addEventListener('click', () => {
-    const text = responses.map(r=>`${r.player}: ${r.availability}${r.ride?' (needs ride)':''}${r.notes?' — '+r.notes:''}`).join('\n');
+    const text = currentRoundResponses().map(r=>`${r.player}: ${r.availability}${r.ride?' (needs ride)':''}${r.notes?' — '+r.notes:''}`).join('\n');
     navigator.clipboard.writeText(text).then(() => {
       const btn = document.getElementById('copy-responses');
       btn.textContent = 'Copied!'; setTimeout(()=>btn.textContent='Copy all responses',2000);
@@ -339,8 +350,11 @@
   });
 
   document.getElementById('clear-responses').addEventListener('click', () => {
-    if (confirm('Clear all saved Friday responses?')) {
-      responses = []; localStorage.removeItem(STORAGE_KEY); renderSavedPanel();
+    const curRound = nextFixture ? nextFixture.round : null;
+    if (confirm(`Clear this device's saved Friday R${curRound ?? ''} responses?`)) {
+      responses = responses.filter(r => (r.round ?? null) !== curRound);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(responses));
+      renderSavedPanel();
     }
   });
 
