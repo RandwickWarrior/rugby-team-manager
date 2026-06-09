@@ -9,6 +9,9 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 15px; background: #f2f2f7; color: #1c1c1e; min-height: 100vh; }
   .app { max-width: 600px; margin: 0 auto; padding: 1rem 1rem 4rem; }
+  .menu-btn { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: #007aff; background: #fff; border: 1px solid #e5e5ea; border-radius: 10px; padding: 9px 16px; text-decoration: none; box-shadow: 0 1px 3px rgba(0,0,0,0.07); transition: all 0.15s; -webkit-tap-highlight-color: transparent; }
+  .menu-btn:active { transform: scale(0.97); background: #f0f6ff; }
+  .menu-btn-bottom { display: block; text-align: center; margin-top: 1.5rem; }
   .header { text-align: center; padding: 1.5rem 0 1rem; }
   .header h1 { font-size: 20px; font-weight: 700; }
   .header p { font-size: 13px; color: #8e8e93; margin-top: 3px; }
@@ -66,11 +69,13 @@
 <body>
 <div class="toast" id="toast"></div>
 <div class="app">
+  <a href="index.html" class="menu-btn">‹ Main menu</a>
   <div class="header">
     <h1>🏉 Rugby Team Manager</h1>
     <p>Powered by your squad · Exports to Rugby Xplorer</p>
   </div>
   <div id="root"></div>
+  <a href="index.html" class="menu-btn menu-btn-bottom">‹ Back to main menu</a>
 </div>
 
 <script>
@@ -167,7 +172,7 @@ const rawSquad = [
   {name:'Kai Lianto', jersey:1, group:'Forward', p1:'Hooker', p2:'Loosehead Prop', friEligible:'Yes', sunEligible:'Yes', fri:['In','N.R.','In','In'], friPos:['','','',''], sun:['','In','','In'], sunPos:['','','','Sub 3'], friS:['Started','N.R.','Started','Started'], sunS:['','Started','Unavailable','Started'], tr:['Yes','No','Yes','No','Yes','No','No',''], trRainedOut:[3]},
   {name:'Aiden Schultz', jersey:null, group:'Back', p1:'Left Wing', p2:'Right Wing', friEligible:'Sometimes', sunEligible:'Yes', fri:['Out','In','In','In'], friPos:['','','',''], sun:['Out','In','In','In'], sunPos:['','','Fly Half','Fly Half'], friS:['Unavailable','Started','Started','Started'], sunS:['Unavailable','Started','Started','Started'], tr:['No','Yes','No','Yes','No','Yes','No',''], trRainedOut:[3]},
   {name:'Xavier Saunders', jersey:null, group:'Back', p1:'Left Wing', p2:'Right Wing', friEligible:'No', sunEligible:'Sometimes', fri:['','','',''], friPos:['','','',''], sun:['In','x','',''], sunPos:['','','Left Centre',''], friS:['','','',''], sunS:['Started','Started','Started','Not Selected'], tr:['No','No','No','No','No','No','No',''], trRainedOut:[3], friIneligible:true, guestNote:'Unregistered — playing under this name pending registration. Not available Fridays.'},
-  {name:'Oliver Worley', jersey:17, group:'Back', p1:'No Preference', p2:'', friEligible:'No', sunEligible:'Sometimes', fri:['','','',''], friPos:['','','',''], sun:['Sub','Sub','',''], sunPos:['','','',''], friS:['','','',''], sunS:['Sub','Sub','Not Selected','Not Selected'], tr:['No','No','No','No','No','No','No',''], trRainedOut:[3], friIneligible:true, guest:true, guestNote:'U10 fill-in'},
+  {name:'Oliver Worley', jersey:17, group:'Back', p1:'No Preference', p2:'', friEligible:'No', sunEligible:'Sometimes', fri:['','','',''], friPos:['','','',''], sun:['Sub','Sub','',''], sunPos:['','','',''], friS:['','','',''], sunS:['Sub','Sub','Not Selected','Not Selected'], tr:['No','No','No','No','No','No','No',''], trRainedOut:[3], friIneligible:true, guest:true, hidden:true, guestNote:'U10 fill-in'},
   {name:'Cade Forshaw', jersey:null, group:'Back', p1:'No Preference', p2:'', friEligible:'No', sunEligible:'Yes', fri:['','','',''], friPos:['','','',''], sun:['','','','In'], sunPos:['','','','Sub 6'], friS:['','','',''], sunS:['','','Not Selected','Started'], tr:['No','No','No','No','No','No','No',''], trRainedOut:[3], friIneligible:true},
 ];
 
@@ -251,7 +256,7 @@ function buildSquad(grade) {
 }
 
 function squadForTeam(grade, team) {
-  return buildSquad(grade).filter(p=>isEligible(p, team));
+  return buildSquad(grade).filter(p=>!p.hidden && isEligible(p, team));
 }
 
 // ── Backend URL — paste your Apps Script deployment URL here ─────────────────
