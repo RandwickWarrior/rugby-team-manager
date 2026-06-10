@@ -133,19 +133,21 @@
   .loading { text-align:center; padding:3rem; color:var(--muted); font-size:14px; }
 
   /* Match Day Team */
-  .mdt-cols { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .mdt-col-head { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; text-align:center; padding:6px; border-radius:8px; margin-bottom:6px; }
-  .mdt-head-sel { background:rgba(0,122,255,0.15); color:#6eb0ff; }
-  .mdt-head-played { background:rgba(0,201,167,0.15); color:var(--teal); }
-  .mdt-row { display:grid; grid-template-columns:34px 1fr; gap:6px; align-items:center; margin-bottom:5px; }
-  .mdt-pos { font-size:10px; color:var(--muted); text-align:right; line-height:1.1; }
-  .mdt-posnum { font-size:13px; font-weight:700; color:var(--white); }
-  .mdt-sel { width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:13px; padding:8px 8px; appearance:none; -webkit-appearance:none; }
-  .mdt-sel:focus { outline:none; border-color:var(--teal); }
-  .mdt-sel option, .mdt-sel optgroup { background:var(--navy-mid); }
-  .mdt-sel.changed { border-color:var(--teal); background:rgba(0,201,167,0.08); }
-  .mdt-bench-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin:12px 0 6px; text-align:center; }
-  .mdt-diff { font-size:11px; color:var(--pen); margin-top:2px; }
+  .mdt-card { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:9px 11px; margin-bottom:7px; }
+  .mdt-card.changed { border-color:var(--teal); }
+  .mdt-card-pos { font-size:12px; font-weight:700; color:var(--white); margin-bottom:6px; }
+  .mdt-card-pos .num { color:var(--teal); }
+  .mdt-line { display:grid; grid-template-columns:60px 1fr; gap:8px; align-items:center; }
+  .mdt-line + .mdt-line { margin-top:5px; }
+  .mdt-line-label { font-size:11px; font-weight:600; }
+  .mdt-line-label.sel { color:#6eb0ff; }
+  .mdt-line-label.played { color:var(--teal); }
+  .mdt-selname { font-size:14px; color:var(--white); font-weight:500; }
+  .mdt-fullsel { width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:14px; padding:9px 10px; appearance:none; -webkit-appearance:none; }
+  .mdt-fullsel:focus { outline:none; border-color:var(--teal); }
+  .mdt-fullsel option { background:var(--navy-mid); }
+  .mdt-fullsel.changed { border-color:var(--teal); background:rgba(0,201,167,0.08); }
+  .mdt-bench-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin:14px 0 7px; text-align:center; }
 </style>
 </head>
 <body>
@@ -838,23 +840,24 @@ function renderTeamTab() {
   const roundOpts = fixtures.map(f=>`<option value="${f.round}" ${f.round===mdtRound?'selected':''}>Round ${f.round} — ${f.opponent} (${f.date})${f.result?' · '+f.result:''}</option>`).join('');
   const slots = [...Array(12).keys()].map(i=>i+1).concat([...Array(U11_BENCH).keys()].map(i=>i+13));
 
-  function rowFor(slot) {
+  function posCard(slot) {
     const sel = mdtSelected[slot] || '';
     const pl  = mdtPlayed[slot] || '';
     const diff = sel !== pl;
+    const posName = slot<=12
+      ? `<span class="num">${slot}</span> · ${U11_POSITIONS[slot-1]}`
+      : `<span class="num">S${slot-12}</span> · Bench`;
     return `
-      <div class="mdt-row">
-        <div class="mdt-pos"><span class="mdt-posnum">${slot<=12?slot:'S'+(slot-12)}</span><br>${slot<=12?U11_POSITIONS[slot-1].replace('Loosehead','LH').replace('Tight Head','TH').replace('Number Eight','No.8').replace('Left ','L ').replace('Right ','R '):'Sub'}</div>
-        <select class="mdt-sel" data-side="selected" data-slot="${slot}">${playerOptions(sel)}</select>
-      </div>`;
-  }
-  function rowPlayed(slot) {
-    const sel = mdtSelected[slot] || '';
-    const pl  = mdtPlayed[slot] || '';
-    const diff = sel !== pl;
-    return `
-      <div class="mdt-row">
-        <select class="mdt-sel ${diff?'changed':''}" data-side="played" data-slot="${slot}">${playerOptions(pl)}</select>
+      <div class="mdt-card ${diff?'changed':''}">
+        <div class="mdt-card-pos">${posName}</div>
+        <div class="mdt-line">
+          <span class="mdt-line-label sel">Selected</span>
+          <span class="mdt-selname">${sel||'—'}</span>
+        </div>
+        <div class="mdt-line">
+          <span class="mdt-line-label played">Played</span>
+          <select class="mdt-fullsel ${diff?'changed':''}" data-side="played" data-slot="${slot}">${playerOptions(pl)}</select>
+        </div>
       </div>`;
   }
 
@@ -878,7 +881,7 @@ function renderTeamTab() {
       <div class="upload-area" id="mdt-upload-area">
         <input type="file" class="upload-input" id="mdt-input" accept="image/*" multiple>
         <div id="mdt-upload-prompt"><div class="upload-icon">👥</div>
-          <div class="upload-text"><strong>Tap to upload</strong> the Line-Up screen(s)<br>Fills the "Played" column automatically</div></div>
+          <div class="upload-text"><strong>Tap to upload</strong> the Line-Up screen(s)<br>Fills the "Played" rows automatically</div></div>
       </div>
       <div class="thumbs" id="mdt-thumbs"></div>
       <button class="analyze-btn" id="mdt-analyze">🔍 Read line-up</button>
@@ -886,25 +889,13 @@ function renderTeamTab() {
     </div>
 
     <div class="section-label">Starting team — positions 1–12</div>
-    <div class="mdt-cols">
-      <div>
-        <div class="mdt-col-head mdt-head-sel">Selected (midweek)</div>
-        ${slots.filter(s=>s<=12).map(rowFor).join('')}
-      </div>
-      <div>
-        <div class="mdt-col-head mdt-head-played">Played (weekend)</div>
-        ${slots.filter(s=>s<=12).map(rowPlayed).join('')}
-      </div>
-    </div>
+    ${slots.filter(s=>s<=12).map(posCard).join('')}
     <div class="mdt-bench-label">Bench</div>
-    <div class="mdt-cols">
-      <div>${slots.filter(s=>s>12).map(rowFor).join('')}</div>
-      <div>${slots.filter(s=>s>12).map(rowPlayed).join('')}</div>
-    </div>
+    ${slots.filter(s=>s>12).map(posCard).join('')}
 
     <div class="submit-section">
       <button class="submit-btn" id="mdt-save">Save Played Team</button>
-      <div class="submit-hint" style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px">Green = differs from the midweek selection</div>
+      <div class="submit-hint" style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px">Green border = the played team differs from the midweek selection</div>
     </div>`;
 
   attachTeamTabEvents();
@@ -923,7 +914,7 @@ function attachTeamTabEvents() {
     mdtLineupImages=[]; mdtLineupUrls=[];
     renderTeamTab(); loadTeams();
   });
-  document.querySelectorAll('.mdt-sel').forEach(sel => {
+  document.querySelectorAll('.mdt-fullsel').forEach(sel => {
     sel.addEventListener('change', () => {
       const slot = +sel.dataset.slot;
       const store = sel.dataset.side === 'selected' ? mdtSelected : mdtPlayed;
