@@ -706,7 +706,16 @@ function buildTeam(){
   const starters=pos.filter(p=>!p.label.startsWith('Sub'));
   const bench=pos.filter(p=>p.label.startsWith('Sub'));
   const available=sq.filter(p=>t.pollResults[p.name]==='Yes, count me in'||t.pollResults[p.name]==='Help! I need a ride, please');
+  const availSet=new Set(available.map(p=>p.name));
+  const others=sq.filter(p=>!availSet.has(p.name)); // no response / unavailable — selectable if they turn up
   const assignedNames=Object.values(t.teamSlots);
+
+  function optionHtml(pl, p, isSub, assigned, suffix){
+    const taken=assignedNames.includes(pl.name)&&assigned!==pl.name;
+    const isPref=!isSub&&pl.prefXplorer.includes(p.label);
+    const isAlt=!isSub&&pl.altXplorer.includes(p.label);
+    return `<option value="${pl.name}" ${assigned===pl.name?'selected':''} ${taken?'disabled':''}>${pl.jersey??'—'} ${pl.name}${suffix||''}${isPref?' ★':isAlt?' ◆':''}</option>`;
+  }
 
   function slotHtml(p){
     const assigned=t.teamSlots[p.num]; const isSub=p.label.startsWith('Sub');
@@ -718,12 +727,15 @@ function buildTeam(){
           ${isSub?'<div class="slot-sub">Any position</div>':''}
           <select data-slot="${p.num}" style="margin-top:6px">
             <option value="">— unassigned —</option>
-            ${available.map(pl=>{
-              const taken=assignedNames.includes(pl.name)&&assigned!==pl.name;
-              const isPref=!isSub&&pl.prefXplorer.includes(p.label);
-              const isAlt=!isSub&&pl.altXplorer.includes(p.label);
-              return `<option value="${pl.name}" ${assigned===pl.name?'selected':''} ${taken?'disabled':''}>${pl.jersey??'—'} ${pl.name}${isPref?' ★':isAlt?' ◆':''}</option>`;
-            }).join('')}
+            <optgroup label="Available">
+              ${available.map(pl=>optionHtml(pl,p,isSub,assigned)).join('')}
+            </optgroup>
+            ${others.length?`<optgroup label="No response / unavailable">
+              ${others.map(pl=>{
+                const suffix=t.pollResults[pl.name]==="Sorry, can't make it"?' (out)':' (no reply)';
+                return optionHtml(pl,p,isSub,assigned,suffix);
+              }).join('')}
+            </optgroup>`:''}
           </select>
         </div>
       </div>`;
@@ -831,14 +843,9 @@ function buildField() {
             .replace('Right Wing','R Wing');
   }
 
-  const availNames = new Set(sq.filter(p =>
-    t.pollResults[p.name]==='Yes, count me in' || t.pollResults[p.name]==='Help! I need a ride, please'
-  ).map(p => p.name));
-
   function playerToken(posLabel, slotNum) {
-    const rawName = t.teamSlots[slotNum] || '';
-    // Only show player if they are actually available for this round
-    const name = (rawName && availNames.has(rawName)) ? rawName : '';
+    // Show whoever is actually selected in this slot (incl. no-response players who turned up)
+    const name = t.teamSlots[slotNum] || '';
     const player = sq.find(p => p.name === name);
     const jersey = player ? (player.jersey ?? '?') : '';
     const coords = posLayout[posLabel] || { x:50, y:50 };
@@ -863,8 +870,7 @@ function buildField() {
   const subs = positions().filter(p => p.label.startsWith('Sub'));
 
   function subToken(s) {
-    const rawName = t.teamSlots[s.num] || '';
-    const name = (rawName && availNames.has(rawName)) ? rawName : '';
+    const name = t.teamSlots[s.num] || '';
     const player = sq.find(p => p.name === name);
     const jersey = player ? (player.jersey ?? '?') : '';
     const nameParts = name ? name.split(' ') : [];
@@ -884,10 +890,7 @@ function buildField() {
     </div>`;
   }
 
-  const unassigned = starters.filter(p => {
-    const n = t.teamSlots[p.num];
-    return !n || !availNames.has(n);
-  }).length;
+  const unassigned = starters.filter(p => !t.teamSlots[p.num]).length;
   const fieldHeight = grade === 'u12' ? 115 : 105;
 
   return `
