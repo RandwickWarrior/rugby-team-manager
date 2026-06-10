@@ -131,6 +131,21 @@
   .report-table td { padding:9px 10px; text-align:center; border-top:1px solid var(--border); white-space:nowrap; }
   .report-table tbody tr:nth-child(odd) td { background:rgba(255,255,255,0.015); }
   .loading { text-align:center; padding:3rem; color:var(--muted); font-size:14px; }
+
+  /* Match Day Team */
+  .mdt-cols { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .mdt-col-head { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; text-align:center; padding:6px; border-radius:8px; margin-bottom:6px; }
+  .mdt-head-sel { background:rgba(0,122,255,0.15); color:#6eb0ff; }
+  .mdt-head-played { background:rgba(0,201,167,0.15); color:var(--teal); }
+  .mdt-row { display:grid; grid-template-columns:34px 1fr; gap:6px; align-items:center; margin-bottom:5px; }
+  .mdt-pos { font-size:10px; color:var(--muted); text-align:right; line-height:1.1; }
+  .mdt-posnum { font-size:13px; font-weight:700; color:var(--white); }
+  .mdt-sel { width:100%; background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:8px; color:var(--white); font-family:'DM Sans',sans-serif; font-size:13px; padding:8px 8px; appearance:none; -webkit-appearance:none; }
+  .mdt-sel:focus { outline:none; border-color:var(--teal); }
+  .mdt-sel option, .mdt-sel optgroup { background:var(--navy-mid); }
+  .mdt-sel.changed { border-color:var(--teal); background:rgba(0,201,167,0.08); }
+  .mdt-bench-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin:12px 0 6px; text-align:center; }
+  .mdt-diff { font-size:11px; color:var(--pen); margin-top:2px; }
 </style>
 </head>
 <body>
@@ -145,11 +160,15 @@
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="season">Season</button>
-    <button class="tab-btn" data-tab="enter">Enter Match Stats</button>
+    <button class="tab-btn" data-tab="enter">Enter Stats</button>
+    <button class="tab-btn" data-tab="team">Match Day Team</button>
   </div>
 
   <!-- Season tab -->
   <div id="season-tab"><div class="loading">Loading season data…</div></div>
+
+  <!-- Match Day Team tab -->
+  <div id="team-tab" style="display:none"><div class="loading">Loading…</div></div>
 
   <!-- Enter Match Stats tab -->
   <div id="enter-tab" style="display:none">
@@ -757,9 +776,243 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     const tab = btn.dataset.tab;
     document.getElementById('season-tab').style.display = tab==='season' ? 'block' : 'none';
     document.getElementById('enter-tab').style.display  = tab==='enter'  ? 'block' : 'none';
+    document.getElementById('team-tab').style.display   = tab==='team'   ? 'block' : 'none';
     if (tab==='season' && !seasonLoaded) loadSeasonData();
+    if (tab==='team') initTeamTab();
   });
 });
+
+// ── Match Day Team tab ──────────────────────────────────────────────────────
+// U11 position labels by slot (1-12 starters, 13-18 bench)
+const U11_POSITIONS = [
+  'Loosehead Prop','Hooker','Tight Head Prop','Left Lock','Right Lock','Number Eight',
+  'Scrum Half','Fly Half','Left Wing','Left Centre','Right Centre','Right Wing'
+];
+const U11_BENCH = 6;
+let mdtTeam = 'seahorses';
+let mdtRound = null;
+let mdtSelected = {};   // {slotNum: playerName} — midweek selection
+let mdtPlayed = {};     // {slotNum: playerName} — as played
+let mdtLineupImages = [];
+let mdtLineupUrls = [];
+
+function teamLabel(key){ return key==='seahorses' ? 'Coogee 11' : 'Coogee Barbarians 11'; }
+
+function initTeamTab() {
+  if (mdtRound === null) {
+    // default to most recent played round of current team
+    const played = FIXTURES[mdtTeam].filter(f=>f.result && f.result!=='Washout');
+    mdtRound = played.length ? played[played.length-1].round : FIXTURES[mdtTeam][0].round;
+  }
+  renderTeamTab();
+  loadTeams();
+}
+
+async function loadTeams() {
+  const label = teamLabel(mdtTeam);
+  const [sel, pl] = await Promise.all([
+    fetch(`${APPS_SCRIPT_URL}?action=team&round=${mdtRound}&team=${encodeURIComponent(label)}&type=selected`).then(r=>r.json()).catch(()=>null),
+    fetch(`${APPS_SCRIPT_URL}?action=team&round=${mdtRound}&team=${encodeURIComponent(label)}&type=played`).then(r=>r.json()).catch(()=>null)
+  ]);
+  mdtSelected = {}; mdtPlayed = {};
+  if (sel && sel.slots) for (const [k,v] of Object.entries(sel.slots)) mdtSelected[+k]=v;
+  if (pl && pl.slots)  for (const [k,v] of Object.entries(pl.slots))  mdtPlayed[+k]=v;
+  // If no played team yet, pre-fill played from selected so manager can adjust
+  if (Object.keys(mdtPlayed).length === 0) mdtPlayed = {...mdtSelected};
+  renderTeamTab();
+}
+
+function posLabel(slot) {
+  return slot <= 12 ? `${slot}. ${U11_POSITIONS[slot-1]}` : `Sub ${slot-12}`;
+}
+
+function playerOptions(selectedName) {
+  const sorted = [...PLAYERS].sort((a,b)=>a.name.localeCompare(b.name));
+  return '<option value="">— none —</option>' + sorted.map(p =>
+    `<option value="${p.name}" ${p.name===selectedName?'selected':''}>${p.name}</option>`).join('');
+}
+
+function renderTeamTab() {
+  const el = document.getElementById('team-tab');
+  const fixtures = FIXTURES[mdtTeam];
+  const roundOpts = fixtures.map(f=>`<option value="${f.round}" ${f.round===mdtRound?'selected':''}>Round ${f.round} — ${f.opponent} (${f.date})${f.result?' · '+f.result:''}</option>`).join('');
+  const slots = [...Array(12).keys()].map(i=>i+1).concat([...Array(U11_BENCH).keys()].map(i=>i+13));
+
+  function rowFor(slot) {
+    const sel = mdtSelected[slot] || '';
+    const pl  = mdtPlayed[slot] || '';
+    const diff = sel !== pl;
+    return `
+      <div class="mdt-row">
+        <div class="mdt-pos"><span class="mdt-posnum">${slot<=12?slot:'S'+(slot-12)}</span><br>${slot<=12?U11_POSITIONS[slot-1].replace('Loosehead','LH').replace('Tight Head','TH').replace('Number Eight','No.8').replace('Left ','L ').replace('Right ','R '):'Sub'}</div>
+        <select class="mdt-sel" data-side="selected" data-slot="${slot}">${playerOptions(sel)}</select>
+      </div>`;
+  }
+  function rowPlayed(slot) {
+    const sel = mdtSelected[slot] || '';
+    const pl  = mdtPlayed[slot] || '';
+    const diff = sel !== pl;
+    return `
+      <div class="mdt-row">
+        <select class="mdt-sel ${diff?'changed':''}" data-side="played" data-slot="${slot}">${playerOptions(pl)}</select>
+      </div>`;
+  }
+
+  el.innerHTML = `
+    <div class="section-card">
+      <div class="grid-2">
+        <div><div class="field-label">Team</div>
+          <select id="mdt-team-select">
+            <option value="seahorses" ${mdtTeam==='seahorses'?'selected':''}>Coogee 11 (Friday)</option>
+            <option value="barbarians" ${mdtTeam==='barbarians'?'selected':''}>Coogee Barbarians 11 (Sunday)</option>
+          </select>
+        </div>
+        <div><div class="field-label">Round</div>
+          <select id="mdt-round-select">${roundOpts}</select>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-label">Rugby Xplorer line-up screenshots (optional)</div>
+      <div class="upload-area" id="mdt-upload-area">
+        <input type="file" class="upload-input" id="mdt-input" accept="image/*" multiple>
+        <div id="mdt-upload-prompt"><div class="upload-icon">👥</div>
+          <div class="upload-text"><strong>Tap to upload</strong> the Line-Up screen(s)<br>Fills the "Played" column automatically</div></div>
+      </div>
+      <div class="thumbs" id="mdt-thumbs"></div>
+      <button class="analyze-btn" id="mdt-analyze">🔍 Read line-up</button>
+      <div class="analyze-status" id="mdt-status"></div>
+    </div>
+
+    <div class="section-label">Starting team — positions 1–12</div>
+    <div class="mdt-cols">
+      <div>
+        <div class="mdt-col-head mdt-head-sel">Selected (midweek)</div>
+        ${slots.filter(s=>s<=12).map(rowFor).join('')}
+      </div>
+      <div>
+        <div class="mdt-col-head mdt-head-played">Played (weekend)</div>
+        ${slots.filter(s=>s<=12).map(rowPlayed).join('')}
+      </div>
+    </div>
+    <div class="mdt-bench-label">Bench</div>
+    <div class="mdt-cols">
+      <div>${slots.filter(s=>s>12).map(rowFor).join('')}</div>
+      <div>${slots.filter(s=>s>12).map(rowPlayed).join('')}</div>
+    </div>
+
+    <div class="submit-section">
+      <button class="submit-btn" id="mdt-save">Save Played Team</button>
+      <div class="submit-hint" style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px">Green = differs from the midweek selection</div>
+    </div>`;
+
+  attachTeamTabEvents();
+}
+
+function attachTeamTabEvents() {
+  document.getElementById('mdt-team-select').addEventListener('change', e => {
+    mdtTeam = e.target.value;
+    const played = FIXTURES[mdtTeam].filter(f=>f.result && f.result!=='Washout');
+    mdtRound = played.length ? played[played.length-1].round : FIXTURES[mdtTeam][0].round;
+    mdtLineupImages=[]; mdtLineupUrls=[];
+    renderTeamTab(); loadTeams();
+  });
+  document.getElementById('mdt-round-select').addEventListener('change', e => {
+    mdtRound = parseInt(e.target.value);
+    mdtLineupImages=[]; mdtLineupUrls=[];
+    renderTeamTab(); loadTeams();
+  });
+  document.querySelectorAll('.mdt-sel').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const slot = +sel.dataset.slot;
+      const store = sel.dataset.side === 'selected' ? mdtSelected : mdtPlayed;
+      if (sel.value) store[slot] = sel.value; else delete store[slot];
+      renderTeamTab();
+    });
+  });
+
+  // Line-up screenshot upload
+  const input = document.getElementById('mdt-input');
+  input.addEventListener('change', async e => {
+    const files = Array.from(e.target.files||[]);
+    if (!files.length) return;
+    document.getElementById('mdt-status').textContent = 'Processing…';
+    for (const file of files) {
+      try { const u = await fileToJpeg(file); mdtLineupImages.push(u.split(',')[1]); mdtLineupUrls.push(u); } catch(err){}
+    }
+    input.value=''; renderMdtThumbs();
+  });
+
+  const analyze = document.getElementById('mdt-analyze');
+  analyze.addEventListener('click', async () => {
+    if (!mdtLineupImages.length) { showToast('Upload a line-up screenshot first'); return; }
+    analyze.disabled = true; analyze.textContent='⏳ Reading…';
+    document.getElementById('mdt-status').textContent='Reading line-up…';
+    try {
+      const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({
+        action:'analyzeLineup', imagesBase64:mdtLineupImages, team:teamLabel(mdtTeam), roster:PLAYERS.map(p=>p.name)
+      })});
+      const data = await res.json();
+      if (data.success && data.lineup) {
+        applyLineup(data.lineup);
+        document.getElementById('mdt-status').textContent = `✅ Read ${data.lineup.length} players — review the Played column`;
+      } else {
+        document.getElementById('mdt-status').textContent = '⚠️ Could not read line-up — adjust manually';
+      }
+    } catch(e) { document.getElementById('mdt-status').textContent='⚠️ Read failed — adjust manually'; }
+    analyze.disabled=false; analyze.textContent='🔍 Re-read line-up';
+  });
+  renderMdtThumbs();
+
+  document.getElementById('mdt-save').addEventListener('click', saveMdtPlayed);
+}
+
+function renderMdtThumbs() {
+  const t = document.getElementById('mdt-thumbs');
+  if (!t) return;
+  t.innerHTML = mdtLineupUrls.map((u,i)=>`<div class="thumb"><img src="${u}"><span class="thumb-num">${i+1}</span><button type="button" class="thumb-remove" data-i="${i}">×</button></div>`).join('');
+  t.querySelectorAll('.thumb-remove').forEach(b=>b.addEventListener('click',()=>{ mdtLineupImages.splice(+b.dataset.i,1); mdtLineupUrls.splice(+b.dataset.i,1); renderMdtThumbs(); }));
+  const area = document.getElementById('mdt-upload-area');
+  const prompt = document.getElementById('mdt-upload-prompt');
+  if (area && prompt) { const has = mdtLineupUrls.length>0; area.classList.toggle('has-image',has); prompt.style.display = has?'none':'block'; }
+}
+
+function findRosterName(name) {
+  if (!name) return null;
+  const lower = name.toLowerCase().trim();
+  const surname = lower.split(' ').slice(-1)[0];
+  let m = PLAYERS.find(p=>p.name.toLowerCase()===lower); if (m) return m.name;
+  m = PLAYERS.find(p=>lower.includes(p.name.toLowerCase())||p.name.toLowerCase().includes(lower)); if (m) return m.name;
+  m = PLAYERS.find(p=>p.name.toLowerCase().split(' ').slice(-1)[0]===surname); if (m) return m.name;
+  m = PLAYERS.find(p=>p.name.toLowerCase().split(' ')[0]===lower.split(' ')[0]); return m?m.name:null;
+}
+
+function applyLineup(lineup) {
+  // lineup: [{order, jersey, player}] in position order (starters first, then bench)
+  mdtPlayed = {};
+  lineup.sort((a,b)=>(a.order||0)-(b.order||0)).forEach((row, idx) => {
+    const slot = row.order && row.order>=1 ? row.order : idx+1;
+    const name = findRosterName(row.player);
+    if (name && slot>=1 && slot<=18) mdtPlayed[slot] = name;
+  });
+  renderTeamTab();
+  showToast('Line-up read — review & save');
+}
+
+async function saveMdtPlayed() {
+  const btn = document.getElementById('mdt-save');
+  btn.textContent='Saving…'; btn.disabled=true;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({
+      action:'saveTeam', round:mdtRound, team:teamLabel(mdtTeam), grade:'u11', type:'played', slots:mdtPlayed
+    })});
+    const data = await res.json();
+    if (data.success) { showToast('Played team saved ✓'); }
+    else showToast('Save failed');
+  } catch(e) { showToast('Connection error'); }
+  btn.textContent='Save Played Team'; btn.disabled=false;
+}
 
 // Init
 populateRounds();
