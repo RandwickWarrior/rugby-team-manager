@@ -349,7 +349,26 @@ document.getElementById('lock-btn').addEventListener('click', () => {
 
 // ── Data store ────────────────────────────────────────────────────────────────
 let liveResponses = {}; // { 'round|team': { playerName: {availability,needsRide,notes} } }
-let liveTeamSlots = {}; // { 'round|team': { slotNum: playerName } }
+let liveTeamSlots = {}; // { 'round|team': { slotNum: playerName } } — selected (midweek)
+let livePlayedSlots = {}; // { 'round|team': { slotNum: playerName } } — as played (weekend)
+
+// U11 starting position labels by slot (1-12); 13-18 are bench
+const U11_POS = ['Loosehead Prop','Hooker','Tight Head Prop','Left Lock','Right Lock','Number Eight','Scrum Half','Fly Half','Left Wing','Left Centre','Right Centre','Right Wing'];
+const U11_POS_ABBR = ['LHP','Hk','THP','LL','RL','N8','SH','FH','LW','LC','RC','RW'];
+
+// As-played wins; fall back to the midweek selection
+function effectiveSlots(round, team) {
+  const played = livePlayedSlots[`${round}|${team}`];
+  if (played && Object.keys(played).length) return played;
+  return liveTeamSlots[`${round}|${team}`] || null;
+}
+// Which slot a player occupied in the effective team for a round (or null)
+function playerSlot(playerName, round, team) {
+  const slots = effectiveSlots(round, team);
+  if (!slots) return null;
+  for (const [n,name] of Object.entries(slots)) if (name === playerName) return +n;
+  return null;
+}
 let trainingData  = {}; // { date: { sessionLabel, records: { player: status } } }
 let matchStats    = []; // [ { round, team, player, tries, convMade, convMissed, penalties, points } ]
 let lastSyncTime  = null;
@@ -389,9 +408,13 @@ async function loadAllData() {
         if (data && data.success && Object.keys(data.responses||{}).length > 0) {
           liveResponses[`${r}|${team}`] = data.responses;
         }
-        const td = await apiGet({ action:'team', round:r, team });
+        const td = await apiGet({ action:'team', round:r, team, type:'selected' });
         if (td && td.success && Object.keys(td.slots||{}).length > 0) {
           liveTeamSlots[`${r}|${team}`] = td.slots;
+        }
+        const pd = await apiGet({ action:'team', round:r, team, type:'played' });
+        if (pd && pd.success && Object.keys(pd.slots||{}).length > 0) {
+          livePlayedSlots[`${r}|${team}`] = pd.slots;
         }
       }
     }
@@ -489,21 +512,19 @@ function calcPlayerStats(player) {
   let friStarted=0, friSub=0, friPlayed=0, friOut=0, friNS=0, friAvail=0;
   let sunStarted=0, sunSub=0, sunPlayed=0, sunOut=0, sunNS=0, sunAvail=0;
 
-  // Collect all rounds that have any data in the sheet
-  const friRounds = new Set([
-    ...Object.keys(liveTeamSlots).filter(k=>k.endsWith('|Coogee 11')).map(k=>+k.split('|')[0]),
-    ...Object.keys(liveResponses).filter(k=>k.endsWith('|Coogee 11')).map(k=>+k.split('|')[0])
+  // Collect all rounds that have any data in the sheet (selected, played or responses)
+  const roundsFor = team => new Set([
+    ...Object.keys(liveTeamSlots).filter(k=>k.endsWith('|'+team)).map(k=>+k.split('|')[0]),
+    ...Object.keys(livePlayedSlots).filter(k=>k.endsWith('|'+team)).map(k=>+k.split('|')[0]),
+    ...Object.keys(liveResponses).filter(k=>k.endsWith('|'+team)).map(k=>+k.split('|')[0])
   ]);
-  const sunRounds = new Set([
-    ...Object.keys(liveTeamSlots).filter(k=>k.endsWith('|Coogee Barbarians 11')).map(k=>+k.split('|')[0]),
-    ...Object.keys(liveResponses).filter(k=>k.endsWith('|Coogee Barbarians 11')).map(k=>+k.split('|')[0])
-  ]);
+  const friRounds = roundsFor('Coogee 11');
+  const sunRounds = roundsFor('Coogee Barbarians 11');
 
   friRounds.forEach(r => {
-    const slots     = liveTeamSlots[`${r}|Coogee 11`];
     const responses = liveResponses[`${r}|Coogee 11`];
     const washout   = FRI_WASHOUT.includes(r);
-    const status    = deriveStatus(player.name, slots, responses);
+    const status    = deriveStatus(player.name, effectiveSlots(r,'Coogee 11'), responses);
     if (!status) return;
     if (status==='Started') { if(!washout){friStarted++;friPlayed++;} friAvail++; }
     else if (status==='Sub') { if(!washout){friSub++;friPlayed++;} friAvail++; }
@@ -512,10 +533,9 @@ function calcPlayerStats(player) {
   });
 
   sunRounds.forEach(r => {
-    const slots     = liveTeamSlots[`${r}|Coogee Barbarians 11`];
     const responses = liveResponses[`${r}|Coogee Barbarians 11`];
     const washout   = SUN_WASHOUT.includes(r);
-    const status    = deriveStatus(player.name, slots, responses);
+    const status    = deriveStatus(player.name, effectiveSlots(r,'Coogee Barbarians 11'), responses);
     if (!status) return;
     if (status==='Started') { if(!washout){sunStarted++;sunPlayed++;} sunAvail++; }
     else if (status==='Sub') { if(!washout){sunSub++;sunPlayed++;} sunAvail++; }
@@ -832,12 +852,13 @@ function buildGridTab() {
     {r:4,res:'W 36–7'},{r:5,res:'W 43–5'},{r:6,res:'Washout'}
   ];
 
-  // Map a player's round status to a coloured cell
-  function statusCell(status, washout) {
+  // Map a player's round status to a coloured cell; played cells show position
+  function statusCell(status, washout, slot) {
     if (status==='Started' || status==='Sub') {
-      return washout
-        ? { t:'A', cls:'g-avail',  title:'Selected — washout (no game)' }
-        : { t:'✓', cls:'g-played', title:'Played' };
+      if (washout) return { t:'A', cls:'g-avail', title:'Selected — washout (no game)' };
+      if (slot && slot<=12) return { t:U11_POS_ABBR[slot-1], cls:'g-played', title:'Played: '+U11_POS[slot-1] };
+      if (slot && slot>12)  return { t:'S', cls:'g-played', title:'Played: bench' };
+      return { t:'✓', cls:'g-played', title:'Played' };
     }
     if (status==='Not Selected') return { t:'A', cls:'g-avail', title:'Available, not selected' };
     if (status==='Unavailable')  return { t:'✗', cls:'g-out',   title:'Not available' };
@@ -856,9 +877,8 @@ function buildGridTab() {
     const rows = [];
     SQUAD.forEach(p => {
       const cells = fixtures.map(f => {
-        const slots = liveTeamSlots[`${f.r}|${teamName}`];
         const resp  = liveResponses[`${f.r}|${teamName}`];
-        return { status: deriveStatus(p.name, slots, resp), wo: f.res === 'Washout' };
+        return { status: deriveStatus(p.name, effectiveSlots(f.r, teamName), resp), wo: f.res === 'Washout', slot: playerSlot(p.name, f.r, teamName) };
       });
       if (cells.some(c => c.status !== '')) rows.push({ p, cells });
     });
@@ -876,8 +896,8 @@ function buildGridTab() {
       const tds = cells.map(c => {
         const k = classify(c.status, c.wo);
         if (k==='played') played++; else if (k==='avail') avail++;
-        const cell = statusCell(c.status, c.wo);
-        return `<td class="${cell.cls}" title="${cell.title}">${cell.t}</td>`;
+        const cell = statusCell(c.status, c.wo, c.slot);
+        return `<td class="${cell.cls}" title="${cell.title}" style="font-size:11px">${cell.t}</td>`;
       }).join('');
       return `<tr><td class="g-name">${p.name}</td>${tds}<td class="g-tot-p">${played||'·'}</td><td class="g-tot-a">${avail||'·'}</td></tr>`;
     }
@@ -913,15 +933,16 @@ function buildGridTab() {
 
   const legend = `
     <div class="grid-legend">
-      <span><b class="g-played">✓</b> Played</span>
+      <span><b class="g-played">LHP</b> Played (shows position)</span>
+      <span><b class="g-played">S</b> Played: bench</span>
       <span><b class="g-avail">A</b> Available, didn't play</span>
       <span><b class="g-out">✗</b> Not available</span>
       <span><b class="g-none">·</b> No response</span>
       <span>R6* = washout</span>
-      <span><b class="g-played">P</b>/<b class="g-avail">A</b> row &amp; column = totals</span>
-    </div>`;
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:1rem">Played cells show the position abbreviation (hover for full name). As-played line-ups take priority over the midweek selection. P / A columns &amp; rows = totals.</div>`;
 
-  return `<div class="section-label">Availability &amp; selection grid</div>
+  return `<div class="section-label">Availability, selection &amp; positions grid</div>
     ${legend}
     ${teamTable('Coogee 11 — Friday', 'Coogee 11', FRI_FIX)}
     ${teamTable('Coogee Barbarians 11 — Sunday', 'Coogee Barbarians 11', SUN_FIX)}`;
