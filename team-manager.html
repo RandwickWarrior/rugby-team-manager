@@ -730,6 +730,13 @@ function buildTeam(){
   }
 
   return `
+    <div style="margin-bottom:12px">
+      <div style="font-size:12px;color:#8e8e93;margin-bottom:4px">Round — ${TEAMS[state.team].label}</div>
+      <select id="team-round" style="width:100%;font-size:15px">
+        ${(FIXTURES[state.team]||[]).map(f=>`<option value="${f.round}" ${t.round===f.round?'selected':''}>Round ${f.round} — ${f.opponent} (${f.date})${f.result?' · '+f.result:''}</option>`).join('')}
+        <option value="custom" ${t.round==='custom'?'selected':''}>Other / manual</option>
+      </select>
+    </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div style="display:flex;background:#f2f2f7;border-radius:10px;padding:3px;gap:2px">
         <button class="btn btn-sm view-toggle ${state.teamView==='positions'?'active':''}" data-view="positions" style="border:none;border-radius:8px;padding:6px 14px;background:${state.teamView==='positions'?'#fff':'transparent'};color:${state.teamView==='positions'?'#007aff':'#8e8e93'};font-weight:${state.teamView==='positions'?'600':'400'};box-shadow:${state.teamView==='positions'?'0 1px 4px rgba(0,0,0,0.12)':'none'}">Positions</button>
@@ -1261,6 +1268,23 @@ function attachEvents(){
     if(gt) gt.addEventListener('click',()=>{state.tab='team';render();});
   }
   if(state.tab==='team'){
+    const teamRoundSel=document.getElementById('team-round');
+    if(teamRoundSel) teamRoundSel.addEventListener('change',async ()=>{
+      const t=td();
+      const val=teamRoundSel.value;
+      if(val==='custom'){ t.round='custom'; storageSave(); render(); return; }
+      const rnd=parseInt(val);
+      t.round=rnd;
+      const fixture=(FIXTURES[state.team]||[]).find(f=>f.round===rnd);
+      if(fixture){ t.match={opponent:fixture.opponent,date:fixture.date,venue:fixture.venue,time:fixture.time}; }
+      t.pollResults={}; t.teamSlots={};
+      storageSave(); render();
+      showToast('Loading Round '+rnd+'…');
+      const r=await syncResponsesFromSheet();
+      const tm=await loadTeamFromSheet();
+      savedState=toCode(); render();
+      showToast(r||tm ? 'Round '+rnd+' loaded ✓' : 'Round '+rnd+' — no saved data');
+    });
     document.querySelectorAll('.view-toggle').forEach(b=>b.addEventListener('click',()=>{
       state.teamView=b.dataset.view; render();
     }));
