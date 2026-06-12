@@ -108,11 +108,23 @@
   .toast.show { opacity: 1; }
 
   @keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  .menu-btn { display:inline-flex; align-items:center; gap:4px; font-size:14px; font-weight:600; color:var(--teal); background:var(--card); border:1px solid var(--border); border-radius:10px; padding:9px 16px; text-decoration:none; transition:all 0.15s; -webkit-tap-highlight-color:transparent; }
+  .menu-btn:active { transform:scale(0.97); background:rgba(0,201,167,0.08); }
+  .menu-btn-bottom { display:block; text-align:center; margin-top:1.75rem; }
+
+  /* Saved-for-date flag */
+  .saved-flag { font-size:13px; padding:8px 12px; border-radius:8px; margin-top:6px; display:none; }
+  .saved-flag.checking { display:block; background:rgba(255,255,255,0.05); color:var(--muted); }
+  .saved-flag.exists { display:block; background:rgba(245,166,35,0.12); color:var(--injured); }
+  .saved-flag.fresh { display:block; background:rgba(52,199,89,0.12); color:var(--yes); }
 </style>
 </head>
 <body>
 <div class="toast" id="toast"></div>
 <div class="container">
+
+  <a href="index.html" class="menu-btn">‹ Main menu</a>
 
   <div class="header">
     <div class="club-badge">📋</div>
@@ -143,6 +155,7 @@
       <option value="custom">Other date…</option>
     </select>
     <input type="date" class="custom-date" id="custom-date" placeholder="Select date">
+    <div class="saved-flag" id="saved-flag"></div>
   </div>
 
   <!-- Main form -->
@@ -185,6 +198,8 @@
     </div>
     <button class="new-session-btn" id="new-session-btn">Enter another session</button>
   </div>
+
+  <a href="index.html" class="menu-btn menu-btn-bottom">‹ Back to main menu</a>
 
 </div>
 
@@ -284,6 +299,35 @@
       attendance = {};
       document.getElementById('main-form').style.display = 'block';
       buildPlayerList();
+      checkExistingAttendance(sessionDate);
+    } else {
+      document.getElementById('saved-flag').className = 'saved-flag';
+    }
+  }
+
+  // Check whether attendance already exists for this date
+  let trainingCache = null;
+  async function checkExistingAttendance(date) {
+    const flag = document.getElementById('saved-flag');
+    flag.className = 'saved-flag checking';
+    flag.textContent = '⏳ Checking if this session is already saved…';
+    try {
+      if (!trainingCache) {
+        const res = await fetch(APPS_SCRIPT_URL + '?action=getTraining');
+        const data = await res.json();
+        trainingCache = (data && data.success) ? (data.sessions || {}) : {};
+      }
+      const sess = trainingCache[date];
+      const count = sess ? Object.keys(sess.records || {}).length : 0;
+      if (count > 0) {
+        flag.className = 'saved-flag exists';
+        flag.textContent = `⚠️ Attendance already saved for this date (${count} players). Saving again will add a duplicate — only continue if updating.`;
+      } else {
+        flag.className = 'saved-flag fresh';
+        flag.textContent = '✓ No attendance saved for this date yet.';
+      }
+    } catch(e) {
+      flag.className = 'saved-flag';
     }
   }
 
@@ -362,6 +406,7 @@
       });
       const data = await res.json();
       if (data.success) {
+        trainingCache = null; // invalidate so re-checks reflect the new save
         showSuccess();
       } else {
         showToast('Error saving — check connection');

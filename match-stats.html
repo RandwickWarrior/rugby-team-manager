@@ -148,11 +148,16 @@
   .mdt-fullsel option { background:var(--navy-mid); }
   .mdt-fullsel.changed { border-color:var(--teal); background:rgba(0,201,167,0.08); }
   .mdt-bench-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:var(--muted); margin:14px 0 7px; text-align:center; }
+  .menu-btn { display:inline-flex; align-items:center; gap:4px; font-size:14px; font-weight:600; color:var(--teal); background:var(--card); border:1px solid var(--border); border-radius:10px; padding:9px 16px; text-decoration:none; transition:all 0.15s; -webkit-tap-highlight-color:transparent; }
+  .menu-btn:active { transform:scale(0.97); background:rgba(0,201,167,0.08); }
+  .menu-btn-bottom { display:block; text-align:center; margin-top:1.75rem; }
 </style>
 </head>
 <body>
 <div class="toast" id="toast"></div>
 <div class="container">
+
+  <a href="index.html" class="menu-btn">‹ Main menu</a>
 
   <div class="header">
     <div class="club-badge">🏆</div>
@@ -253,6 +258,8 @@
   </div>
 
   </div><!-- /enter-tab -->
+
+  <a href="index.html" class="menu-btn menu-btn-bottom">‹ Back to main menu</a>
 
 </div>
 <script>
