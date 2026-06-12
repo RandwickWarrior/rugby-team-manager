@@ -50,8 +50,10 @@
   .stat { background: #fff; border-radius: 12px; padding: 10px 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
   .stat-val { font-size: 24px; font-weight: 700; }
   .stat-lbl { font-size: 11px; color: #8e8e93; margin-top: 2px; }
-  .team-slot { background: #fff; border-radius: 14px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border-left: 4px solid #007aff; }
+  .team-slot { position: relative; background: #fff; border-radius: 14px; padding: 12px 14px; display: flex; align-items: flex-start; gap: 12px; margin-bottom: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); border-left: 4px solid #007aff; }
   .team-slot.bench { border-left-color: #af52de; }
+  .slot-clear { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: #ffe5e5; color: #c0392b; border: none; font-size: 16px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+  .slot-clear:active { background: #ffd0d0; transform: scale(0.92); }
   .slot-num { font-size: 20px; font-weight: 700; color: #8e8e93; min-width: 28px; padding-top: 2px; }
   .slot-pos { font-size: 14px; font-weight: 600; }
   .slot-sub { font-size: 11px; color: #8e8e93; margin-top: 2px; }
@@ -721,6 +723,7 @@ function buildTeam(){
     const assigned=t.teamSlots[p.num]; const isSub=p.label.startsWith('Sub');
     return `
       <div class="team-slot ${isSub?'bench':''}">
+        ${assigned?`<button class="slot-clear" data-clear="${p.num}" title="Clear this position">×</button>`:''}
         <span class="slot-num">${p.num}</span>
         <div style="flex:1;min-width:0">
           <div class="slot-pos">${p.label}</div>
@@ -1299,6 +1302,10 @@ function attachEvents(){
         saveTeamSlots(); render();
       });
     });
+    document.querySelectorAll('[data-clear]').forEach(b=>b.addEventListener('click',()=>{
+      delete td().teamSlots[+b.dataset.clear];
+      saveTeamSlots(); render();
+    }));
     const af=document.getElementById('auto-fill');
     if(af) af.addEventListener('click',autoFill);
     const ct=document.getElementById('clear-team');
