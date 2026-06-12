@@ -36,6 +36,13 @@
   .player-select { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 16px; padding: 14px 16px; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a9ab8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 14px center; cursor: pointer; transition: border-color 0.2s; }
   .player-select:focus { outline: none; border-color: var(--accent); }
   .player-select option, .player-select optgroup { background: var(--navy-mid); color: var(--white); }
+  .round-picker { width: 100%; margin-top: 10px; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--white); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 12px; appearance: none; -webkit-appearance: none; cursor: pointer; }
+  .round-picker:focus { outline: none; border-color: var(--accent); }
+  .round-picker option { background: var(--navy-mid); color: var(--white); }
+  .existing-flag { font-size: 13px; padding: 9px 12px; border-radius: var(--radius-sm); margin-top: 10px; display: none; line-height: 1.4; }
+  .existing-flag.checking { display: block; background: rgba(255,255,255,0.05); color: var(--muted); }
+  .existing-flag.found { display: block; background: rgba(245,166,35,0.12); color: #f5a623; }
+  .existing-flag.none { display: block; background: rgba(94,92,230,0.12); color: var(--accent); }
   .choices { display: flex; flex-direction: column; gap: 10px; }
   .choice { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
   .choice:active { transform: scale(0.98); }
@@ -104,9 +111,10 @@
     <h1>Are You <span>Available?</span></h1>
     <p class="subtitle">Coogee Seahorses JRUFC · Barbarians · Sunday mornings</p>
     <div class="match-card" id="match-info">
-      <div class="match-label">Next match · Coogee Barbarians 11</div>
+      <div class="match-label">Match · Coogee Barbarians 11</div>
       <div class="match-detail" id="match-opponent">Opponent TBC</div>
       <div class="match-meta" id="match-meta">Details coming soon</div>
+      <select id="round-picker" class="round-picker"></select>
     </div>
   </div>
 
@@ -142,6 +150,7 @@
         <option value="Max Boss">Max Boss</option>
         <option value="Thomas Morgan">Thomas Morgan</option>
       </select>
+      <div class="existing-flag" id="existing-flag"></div>
     </div>
 
     <div class="section step step-2">
@@ -227,10 +236,46 @@
     const today = new Date(); today.setHours(0,0,0,0);
     return FIXTURES.map(f=>({...f,jsDate:new Date(f.isoDate)})).filter(f=>f.jsDate>=today).sort((a,b)=>a.jsDate-b.jsDate)[0]||null;
   }
-  const nextFixture = getNextFixture();
-  if (nextFixture) {
+  let nextFixture = getNextFixture() || FIXTURES[FIXTURES.length-1]; // current target round (mutable)
+
+  const roundPicker = document.getElementById('round-picker');
+  roundPicker.innerHTML = FIXTURES.map(f =>
+    `<option value="${f.round}" ${nextFixture && f.round===nextFixture.round?'selected':''}>Round ${f.round} — ${f.opponent} (${f.date})</option>`
+  ).join('');
+
+  function applyFixture() {
+    if (!nextFixture) return;
     document.getElementById('match-opponent').textContent = 'vs ' + nextFixture.opponent;
     document.getElementById('match-meta').textContent = 'Round ' + nextFixture.round + ' · ' + nextFixture.date + ' · ' + nextFixture.venue + ' · ' + nextFixture.time;
+  }
+  applyFixture();
+
+  roundPicker.addEventListener('change', () => {
+    nextFixture = FIXTURES.find(f => f.round === +roundPicker.value) || nextFixture;
+    applyFixture();
+    renderSavedPanel();
+    checkExisting();
+  });
+
+  async function checkExisting() {
+    const flag = document.getElementById('existing-flag');
+    const player = playerSelect.value;
+    if (!player || !nextFixture) { flag.className = 'existing-flag'; return; }
+    flag.className = 'existing-flag checking';
+    flag.textContent = '⏳ Checking for an existing response…';
+    try {
+      const qs = new URLSearchParams({ action:'responses', round:nextFixture.round, team:TEAM }).toString();
+      const r = await fetch(APPS_SCRIPT_URL + '?' + qs);
+      const data = await r.json();
+      const existing = data && data.responses ? data.responses[player] : null;
+      if (existing && existing.availability) {
+        flag.className = 'existing-flag found';
+        flag.innerHTML = `📋 <b>${player}</b> already responded for Round ${nextFixture.round}: <b>${existing.availability}</b>${existing.needsRide?' 🚗':''}.<br>Submitting again will update it.`;
+      } else {
+        flag.className = 'existing-flag none';
+        flag.textContent = `✓ No response yet from ${player} for Round ${nextFixture.round}.`;
+      }
+    } catch(e) { flag.className = 'existing-flag'; }
   }
 
   async function postToScript(payload) {
@@ -274,7 +319,7 @@
     togglePill.classList.toggle('on', needsRide); rideToggle.classList.toggle('active', needsRide);
   });
 
-  playerSelect.addEventListener('change', checkSubmit);
+  playerSelect.addEventListener('change', () => { checkSubmit(); checkExisting(); });
   function checkSubmit() { submitBtn.disabled = !(playerSelect.value && selectedAvailability); }
 
   form.addEventListener('submit', e => {
@@ -310,6 +355,8 @@
     document.querySelectorAll('.choice').forEach(c => c.classList.remove('selected-yes','selected-no','selected-maybe'));
     rideSection.classList.remove('visible'); togglePill.classList.remove('on'); rideToggle.classList.remove('active');
     submitBtn.disabled = true; notesLabel.textContent = 'Step 4 — Anything else?';
+    document.getElementById('existing-flag').className = 'existing-flag';
+    roundPicker.value = nextFixture.round;
   });
 
   function currentRoundResponses() {
