@@ -668,58 +668,79 @@ function buildPlayersTab() {
 
 // ── Training tab ──────────────────────────────────────────────────────────────
 function buildTrainingTab() {
-  const sessionDates = Object.keys(trainingData).sort();
-  const usingSheet   = sessionDates.length > 0;
+  // Only well-formed ISO dates, earliest → latest
+  const sessionDates = Object.keys(trainingData)
+    .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .sort();
 
-  const playerCards = SQUAD.map(p => {
-    const hasSheetData = usingSheet && sessionDates.some(d => trainingData[d]?.records?.[p.name] !== undefined);
-    let dots = '', total = 0, attended = 0;
+  if (!sessionDates.length) {
+    return `<div class="section-label">Training attendance</div>
+      <div class="notice" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem;color:var(--muted)">No training data loaded yet. Tap ↻ Refresh.</div>`;
+  }
 
-    if (hasSheetData) {
-      // Sheet data is source of truth — one dot per session
-      dots = sessionDates.map(d => {
-        const v = trainingData[d]?.records?.[p.name];
-        if (v === 'yes')     { total++; attended++; return `<div class="session-dot dot-yes" title="${d}: Attended"></div>`; }
-        if (v === 'no')      { total++; return `<div class="session-dot dot-no" title="${d}: Absent"></div>`; }
-        if (v === 'injured') { total++; return `<div class="session-dot dot-injured" title="${d}: Injured"></div>`; }
-        if (v === 'unavail') { total++; return `<div class="session-dot dot-unavail" title="${d}: Unavailable"></div>`; }
-        return `<div class="session-dot dot-unknown" title="${d}: No data"></div>`;
+  function fmtDate(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    return isNaN(d) ? iso : d.toLocaleDateString('en-AU', { day:'numeric', month:'short' });
+  }
+  function cell(v) {
+    if (v === 'yes')     return { t:'✓', cls:'g-played', title:'Attended' };
+    if (v === 'no')      return { t:'✗', cls:'g-out',    title:'Absent' };
+    if (v === 'injured') return { t:'I', cls:'g-avail',  title:'Injured' };
+    if (v === 'unavail') return { t:'U', cls:'g-none',   title:'Unavailable' };
+    return { t:'·', cls:'g-none', title:'No data' };
+  }
+
+  function rowsFor(group) {
+    return SQUAD.filter(p => p.group === group)
+      .sort((a,b) => a.name.localeCompare(b.name))
+      .filter(p => sessionDates.some(d => trainingData[d]?.records?.[p.name] !== undefined))
+      .map(p => {
+        let attended = 0, total = 0;
+        const tds = sessionDates.map(d => {
+          const v = trainingData[d]?.records?.[p.name];
+          if (v === 'yes') { attended++; total++; }
+          else if (v === 'no' || v === 'injured' || v === 'unavail') total++;
+          const c = cell(v);
+          return `<td class="${c.cls}" title="${fmtDate(d)}: ${c.title}" style="font-size:12px">${c.t}</td>`;
+        }).join('');
+        const pct = total > 0 ? Math.round(attended/total*100) : null;
+        return `<tr><td class="g-name">${p.name}</td>${tds}<td style="color:${pctColor(pct)};font-weight:700">${pct!==null?pct+'%':'—'}</td></tr>`;
       }).join('');
-    } else {
-      // Fallback: static tr[] data (players not in training sheet)
-      const hist = p.tr || [];
-      total    = hist.filter(v=>v!=='').length;
-      attended = hist.filter(v=>v==='Yes').length;
-      dots = hist.map((v,i) => {
-        const lbl = TRAINING_SESSIONS[i] || `Session ${i+1}`;
-        if (v==='Yes') return `<div class="session-dot dot-yes" title="${lbl}"></div>`;
-        if (v==='No')  return `<div class="session-dot dot-no" title="${lbl}"></div>`;
-        return `<div class="session-dot dot-unknown" title="${lbl}: No data"></div>`;
-      }).join('');
-    }
+  }
 
-    const pct = total > 0 ? Math.round(attended/total*100) : null;
-    return `
-      <div class="training-player-card">
-        <div class="tpc-name">${p.name}</div>
-        <div class="tpc-sessions">${dots}</div>
-        <div class="tpc-pct" style="color:${pctColor(pct)}">${attended}/${total} sessions ${pct!==null?'('+pct+'%)':''}
-        </div>
-      </div>`;
-  }).join('');
+  const headers = sessionDates.map(d => `<th title="${d}">${fmtDate(d)}</th>`).join('');
+  const span = sessionDates.length + 2;
+  const fwd = rowsFor('Forward'), back = rowsFor('Back');
 
-  const sessionCount = usingSheet ? sessionDates.length : TRAINING_SESSIONS.length;
+  // Per-session attended count
+  const colAtt = sessionDates.map(d => {
+    let a = 0; SQUAD.forEach(p => { if (trainingData[d]?.records?.[p.name] === 'yes') a++; });
+    return a;
+  });
+  const totRow = `<tr class="g-totrow"><td class="g-name">Attended</td>${colAtt.map(n=>`<td class="g-played">${n}</td>`).join('')}<td></td></tr>`;
+
   const legend = `
-    <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-bottom:1rem;">
-      <span style="display:flex;align-items:center;gap:4px"><div class="session-dot dot-yes" style="width:10px;height:10px;border-radius:2px"></div>Attended</span>
-      <span style="display:flex;align-items:center;gap:4px"><div class="session-dot dot-no" style="width:10px;height:10px;border-radius:2px"></div>Absent</span>
-      <span style="display:flex;align-items:center;gap:4px"><div class="session-dot dot-injured" style="width:10px;height:10px;border-radius:2px"></div>Injured</span>
-      <span style="display:flex;align-items:center;gap:4px"><div class="session-dot dot-unavail" style="width:10px;height:10px;border-radius:2px"></div>Unavailable</span>
+    <div class="grid-legend">
+      <span><b class="g-played">✓</b> Attended</span>
+      <span><b class="g-out">✗</b> Absent</span>
+      <span><b class="g-avail">I</b> Injured</span>
+      <span><b class="g-none">U</b> Unavailable</span>
+      <span><b class="g-none">·</b> No data</span>
     </div>`;
 
-  return `<div class="section-label">Training attendance — ${sessionCount} sessions tracked</div>
+  return `<div class="section-label">Training attendance — ${sessionDates.length} sessions (earliest → latest)</div>
     ${legend}
-    <div class="training-grid">${playerCards}</div>`;
+    <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border)">
+    <table class="grid-table">
+      <thead><tr><th class="g-name">Player</th>${headers}<th class="g-tot">%</th></tr></thead>
+      <tbody>
+        ${fwd ? `<tr class="g-grp"><td colspan="${span}">Forwards</td></tr>${fwd}` : ''}
+        ${back ? `<tr class="g-grp"><td colspan="${span}">Backs</td></tr>${back}` : ''}
+        ${totRow}
+      </tbody>
+    </table>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">Dates run earliest (left) to latest (right). % = attendance across recorded sessions. Hover a cell for the date.</div>`;
 }
 
 // ── Season tab ────────────────────────────────────────────────────────────────
