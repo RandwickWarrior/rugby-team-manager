@@ -668,20 +668,27 @@ function buildPlayersTab() {
 
 // ── Training tab ──────────────────────────────────────────────────────────────
 function buildTrainingTab() {
-  // Only well-formed ISO dates, earliest → latest
-  const sessionDates = Object.keys(trainingData)
-    .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
-    .sort();
+  // Date keys come in two formats (ISO text + full Date strings). Normalise &
+  // merge by calendar day, then sort earliest → latest.
+  function localISO(dt){ const y=dt.getFullYear(),m=String(dt.getMonth()+1).padStart(2,'0'),d=String(dt.getDate()).padStart(2,'0'); return `${y}-${m}-${d}`; }
+  const merged = {};
+  Object.entries(trainingData).forEach(([raw, sess]) => {
+    const dt = new Date(raw);
+    if (isNaN(dt)) return;
+    const key = localISO(dt);
+    if (!merged[key]) merged[key] = { dt, records:{} };
+    Object.assign(merged[key].records, sess.records || {});
+  });
+  const sessions = Object.entries(merged)
+    .map(([key,v]) => ({ key, dt:v.dt, records:v.records }))
+    .sort((a,b) => a.dt - b.dt);
 
-  if (!sessionDates.length) {
+  if (!sessions.length) {
     return `<div class="section-label">Training attendance</div>
       <div class="notice" style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem;color:var(--muted)">No training data loaded yet. Tap ↻ Refresh.</div>`;
   }
 
-  function fmtDate(iso) {
-    const d = new Date(iso + 'T00:00:00');
-    return isNaN(d) ? iso : d.toLocaleDateString('en-AU', { day:'numeric', month:'short' });
-  }
+  const fmtDate = dt => dt.toLocaleDateString('en-AU', { day:'numeric', month:'short' });
   function cell(v) {
     if (v === 'yes')     return { t:'✓', cls:'g-played', title:'Attended' };
     if (v === 'no')      return { t:'✗', cls:'g-out',    title:'Absent' };
@@ -693,28 +700,33 @@ function buildTrainingTab() {
   function rowsFor(group) {
     return SQUAD.filter(p => p.group === group)
       .sort((a,b) => a.name.localeCompare(b.name))
-      .filter(p => sessionDates.some(d => trainingData[d]?.records?.[p.name] !== undefined))
+      .filter(p => sessions.some(s => s.records[p.name] !== undefined))
       .map(p => {
         let attended = 0, total = 0;
-        const tds = sessionDates.map(d => {
-          const v = trainingData[d]?.records?.[p.name];
+        const tds = sessions.map(s => {
+          const v = s.records[p.name];
           if (v === 'yes') { attended++; total++; }
           else if (v === 'no' || v === 'injured' || v === 'unavail') total++;
           const c = cell(v);
-          return `<td class="${c.cls}" title="${fmtDate(d)}: ${c.title}" style="font-size:12px">${c.t}</td>`;
+          return `<td class="${c.cls}" title="${fmtDate(s.dt)}: ${c.title}" style="font-size:12px;padding:7px 5px">${c.t}</td>`;
         }).join('');
         const pct = total > 0 ? Math.round(attended/total*100) : null;
         return `<tr><td class="g-name">${p.name}</td>${tds}<td style="color:${pctColor(pct)};font-weight:700">${pct!==null?pct+'%':'—'}</td></tr>`;
       }).join('');
   }
 
-  const headers = sessionDates.map(d => `<th title="${d}">${fmtDate(d)}</th>`).join('');
-  const span = sessionDates.length + 2;
+  // Only the most recent (rightmost) column is labelled; earlier ones blank
+  const lastIdx = sessions.length - 1;
+  const headers = sessions.map((s,i) =>
+    i === lastIdx
+      ? `<th title="${s.key}" style="color:var(--teal)">${fmtDate(s.dt)}</th>`
+      : `<th title="${s.key}" style="padding:7px 4px"></th>`
+  ).join('');
+  const span = sessions.length + 2;
   const fwd = rowsFor('Forward'), back = rowsFor('Back');
 
-  // Per-session attended count
-  const colAtt = sessionDates.map(d => {
-    let a = 0; SQUAD.forEach(p => { if (trainingData[d]?.records?.[p.name] === 'yes') a++; });
+  const colAtt = sessions.map(s => {
+    let a = 0; SQUAD.forEach(p => { if (s.records[p.name] === 'yes') a++; });
     return a;
   });
   const totRow = `<tr class="g-totrow"><td class="g-name">Attended</td>${colAtt.map(n=>`<td class="g-played">${n}</td>`).join('')}<td></td></tr>`;
@@ -728,7 +740,8 @@ function buildTrainingTab() {
       <span><b class="g-none">·</b> No data</span>
     </div>`;
 
-  return `<div class="section-label">Training attendance — ${sessionDates.length} sessions (earliest → latest)</div>
+  const range = `${fmtDate(sessions[0].dt)} → ${fmtDate(sessions[lastIdx].dt)}`;
+  return `<div class="section-label">Training attendance — ${sessions.length} sessions (${range})</div>
     ${legend}
     <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border)">
     <table class="grid-table">
@@ -740,7 +753,7 @@ function buildTrainingTab() {
       </tbody>
     </table>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:6px">Dates run earliest (left) to latest (right). % = attendance across recorded sessions. Hover a cell for the date.</div>`;
+    <div style="font-size:11px;color:var(--muted);margin-top:6px">Earliest (left) → most recent (right, dated). Hover any cell for its date. % = attendance across recorded sessions.</div>`;
 }
 
 // ── Season tab ────────────────────────────────────────────────────────────────
