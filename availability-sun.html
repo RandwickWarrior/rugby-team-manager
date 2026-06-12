@@ -43,6 +43,10 @@
   .existing-flag.checking { display: block; background: rgba(255,255,255,0.05); color: var(--muted); }
   .existing-flag.found { display: block; background: rgba(245,166,35,0.12); color: #f5a623; }
   .existing-flag.none { display: block; background: rgba(94,92,230,0.12); color: var(--accent); }
+  .count-bar { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 1.75rem; }
+  .count-stat { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 6px; text-align: center; }
+  .count-val { font-size: 26px; font-weight: 700; line-height: 1; }
+  .count-lbl { font-size: 11px; color: var(--muted); margin-top: 5px; }
   .choices { display: flex; flex-direction: column; gap: 10px; }
   .choice { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--card); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
   .choice:active { transform: scale(0.98); }
@@ -116,6 +120,13 @@
       <div class="match-meta" id="match-meta">Details coming soon</div>
       <select id="round-picker" class="round-picker"></select>
     </div>
+  </div>
+
+  <div class="count-bar" id="count-bar">
+    <div class="count-stat"><div class="count-val" style="color:#34c759" id="cnt-avail">–</div><div class="count-lbl">Available</div></div>
+    <div class="count-stat"><div class="count-val" style="color:#ff3b30" id="cnt-out">–</div><div class="count-lbl">Out</div></div>
+    <div class="count-stat"><div class="count-val" style="color:#ff9500" id="cnt-ride">–</div><div class="count-lbl">Needs ride</div></div>
+    <div class="count-stat"><div class="count-val" style="color:#aeaeb2" id="cnt-none">–</div><div class="count-lbl">No reply</div></div>
   </div>
 
   <form id="avail-form">
@@ -257,26 +268,52 @@
     checkExisting();
   });
 
-  async function checkExisting() {
+  const TOTAL_PLAYERS = Array.from(playerSelect.options).filter(o => o.value).length;
+  let lastResponses = {};
+
+  async function fetchRoundResponses() {
+    if (!nextFixture) return;
+    try {
+      const qs = new URLSearchParams({ action:'responses', round:nextFixture.round, team:TEAM }).toString();
+      const data = await (await fetch(APPS_SCRIPT_URL + '?' + qs)).json();
+      lastResponses = (data && data.responses) || {};
+    } catch(e) { /* keep previous */ }
+  }
+
+  function renderCounts() {
+    const vals = Object.values(lastResponses);
+    const ride  = vals.filter(r => r.needsRide).length;
+    const avail = vals.filter(r => r.availability==='Yes, count me in' && !r.needsRide).length;
+    const out   = vals.filter(r => r.availability==="Sorry, can't make it").length;
+    const noReply = Math.max(0, TOTAL_PLAYERS - Object.keys(lastResponses).length);
+    document.getElementById('cnt-avail').textContent = avail;
+    document.getElementById('cnt-ride').textContent  = ride;
+    document.getElementById('cnt-out').textContent   = out;
+    document.getElementById('cnt-none').textContent  = noReply;
+  }
+
+  function updateExistingFlag() {
     const flag = document.getElementById('existing-flag');
     const player = playerSelect.value;
     if (!player || !nextFixture) { flag.className = 'existing-flag'; return; }
-    flag.className = 'existing-flag checking';
-    flag.textContent = '⏳ Checking for an existing response…';
-    try {
-      const qs = new URLSearchParams({ action:'responses', round:nextFixture.round, team:TEAM }).toString();
-      const r = await fetch(APPS_SCRIPT_URL + '?' + qs);
-      const data = await r.json();
-      const existing = data && data.responses ? data.responses[player] : null;
-      if (existing && existing.availability) {
-        flag.className = 'existing-flag found';
-        flag.innerHTML = `📋 <b>${player}</b> already responded for Round ${nextFixture.round}: <b>${existing.availability}</b>${existing.needsRide?' 🚗':''}.<br>Submitting again will update it.`;
-      } else {
-        flag.className = 'existing-flag none';
-        flag.textContent = `✓ No response yet from ${player} for Round ${nextFixture.round}.`;
-      }
-    } catch(e) { flag.className = 'existing-flag'; }
+    const existing = lastResponses[player];
+    if (existing && existing.availability) {
+      flag.className = 'existing-flag found';
+      flag.innerHTML = `📋 <b>${player}</b> already responded for Round ${nextFixture.round}: <b>${existing.availability}</b>${existing.needsRide?' 🚗':''}.<br>Submitting again will update it.`;
+    } else {
+      flag.className = 'existing-flag none';
+      flag.textContent = `✓ No response yet from ${player} for Round ${nextFixture.round}.`;
+    }
   }
+
+  async function checkExisting() {
+    const flag = document.getElementById('existing-flag');
+    if (playerSelect.value) { flag.className = 'existing-flag checking'; flag.textContent = '⏳ Checking for an existing response…'; }
+    await fetchRoundResponses();
+    renderCounts();
+    updateExistingFlag();
+  }
+  checkExisting(); // populate counts on load
 
   async function postToScript(payload) {
     try { const r = await fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify(payload) }); return await r.json(); }
@@ -335,6 +372,9 @@
     if (nextFixture) {
       postToScript({ action:'submitResponse', round:nextFixture.round, team:TEAM, playerName:player, availability, needsRide:ride, notes });
     }
+    lastResponses[player] = { availability, needsRide: ride };
+    renderCounts();
+    setTimeout(() => { fetchRoundResponses().then(renderCounts); }, 1500);
     form.style.display = 'none';
     document.getElementById('success-screen').style.display = 'block';
     document.getElementById('success-name').textContent = player.split(' ')[0];
