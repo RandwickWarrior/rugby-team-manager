@@ -54,6 +54,24 @@
   .team-slot.bench { border-left-color: #af52de; }
   .slot-clear { position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: #ffe5e5; color: #c0392b; border: none; font-size: 16px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
   .slot-clear:active { background: #ffd0d0; transform: scale(0.92); }
+  /* Drag & drop view */
+  .dd-hint { font-size: 12px; color: #636366; background: #f2f2f7; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; line-height: 1.5; }
+  .dd-pool { background: #fff; border: 1px dashed #c7c7cc; border-radius: 14px; padding: 10px 12px; margin-bottom: 12px; }
+  .dd-pool.over { border-color: #007aff; background: #f0f6ff; }
+  .dd-pool-label { font-size: 11px; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .dd-pool-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; }
+  .dd-chip { display: inline-flex; align-items: center; gap: 4px; background: #e3f0ff; color: #005ecb; border: 1px solid #b9dcff; border-radius: 18px; padding: 8px 13px; font-size: 13px; font-weight: 600; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  .dd-chip.other { background: #f2f2f7; color: #636366; border-color: #e5e5ea; }
+  .dd-chip.in-slot { background: #eafaf0; color: #1a7f4b; border-color: #b8e8cc; }
+  .dd-chip.sel { outline: 2px solid #007aff; outline-offset: 1px; }
+  .dd-chip.dragging { opacity: 0.35; }
+  .dd-slot { display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid #e5e5ea; border-left: 4px solid #007aff; border-radius: 12px; padding: 10px 12px; margin-bottom: 7px; }
+  .dd-slot.bench { border-left-color: #af52de; }
+  .dd-slot.over { border-color: #007aff; background: #f0f6ff; box-shadow: 0 0 0 2px rgba(0,122,255,0.2); }
+  .dd-slot-pos { font-size: 13px; font-weight: 600; color: #1c1c1e; width: 128px; flex-shrink: 0; }
+  .dd-slot-player { flex: 1; min-width: 0; }
+  .dd-empty { font-size: 12px; color: #aeaeb2; font-style: italic; }
+  .dd-ghost { position: fixed; transform: translate(-50%,-50%); background: #007aff; color: #fff; border-radius: 18px; padding: 8px 14px; font-size: 13px; font-weight: 600; pointer-events: none; z-index: 9999; box-shadow: 0 4px 16px rgba(0,0,0,0.3); white-space: nowrap; }
   .slot-num { font-size: 20px; font-weight: 700; color: #8e8e93; min-width: 28px; padding-top: 2px; }
   .slot-pos { font-size: 14px; font-weight: 600; }
   .slot-sub { font-size: 11px; color: #8e8e93; margin-top: 2px; }
@@ -752,26 +770,24 @@ function buildTeam(){
         <option value="custom" ${t.round==='custom'?'selected':''}>Other / manual</option>
       </select>
     </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <div style="display:flex;background:#f2f2f7;border-radius:10px;padding:3px;gap:2px">
-        <button class="btn btn-sm view-toggle ${state.teamView==='positions'?'active':''}" data-view="positions" style="border:none;border-radius:8px;padding:6px 14px;background:${state.teamView==='positions'?'#fff':'transparent'};color:${state.teamView==='positions'?'#007aff':'#8e8e93'};font-weight:${state.teamView==='positions'?'600':'400'};box-shadow:${state.teamView==='positions'?'0 1px 4px rgba(0,0,0,0.12)':'none'}">Positions</button>
-        <button class="btn btn-sm view-toggle ${state.teamView==='field'?'active':''}" data-view="field" style="border:none;border-radius:8px;padding:6px 14px;background:${state.teamView==='field'?'#fff':'transparent'};color:${state.teamView==='field'?'#007aff':'#8e8e93'};font-weight:${state.teamView==='field'?'600':'400'};box-shadow:${state.teamView==='field'?'0 1px 4px rgba(0,0,0,0.12)':'none'}">Field view</button>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button class="btn btn-sm btn-primary" id="auto-fill">Auto-fill</button>
-        <button class="btn btn-sm" id="clear-team">Clear</button>
-      </div>
+    <div style="display:flex;background:#f2f2f7;border-radius:10px;padding:3px;gap:2px;margin-bottom:10px">
+      ${[['positions','Drop-down'],['dragdrop','Drag &amp; drop'],['field','Field view']].map(([v,lbl])=>`
+        <button class="btn btn-sm view-toggle ${state.teamView===v?'active':''}" data-view="${v}" style="flex:1;border:none;border-radius:8px;padding:7px 6px;font-size:12px;background:${state.teamView===v?'#fff':'transparent'};color:${state.teamView===v?'#007aff':'#8e8e93'};font-weight:${state.teamView===v?'600':'400'};box-shadow:${state.teamView===v?'0 1px 4px rgba(0,0,0,0.12)':'none'}">${lbl}</button>`).join('')}
     </div>
-    <div style="margin-bottom:12px">
+    <div style="display:flex;gap:6px;margin-bottom:12px">
+      <button class="btn btn-sm btn-primary" id="auto-fill" style="flex:1">Auto-fill</button>
+      <button class="btn btn-sm" id="clear-team" style="flex:1">Clear</button>
+    </div>
+    ${state.teamView!=='dragdrop' ? `<div style="margin-bottom:12px">
       <div class="section-label">Available (${available.length}) — ${TEAMS[state.team].label}</div>
       ${available.length===0?'<div class="notice">No players available yet — enter poll responses first.</div>':
         `<div style="display:flex;flex-wrap:wrap;">${available.map(p=>{
           const a=assignedNames.includes(p.name);
           return `<span class="avail-chip ${a?'assigned':''}">${p.jersey??'—'} ${p.name}${a?' ✓':''}</span>`;
         }).join('')}</div>`}
-    </div>
+    </div>` : ''}
 
-    ${state.teamView==='field' ? buildField() : `
+    ${state.teamView==='field' ? buildField() : state.teamView==='dragdrop' ? buildDragDrop() : `
     <div class="notice">★ preferred &nbsp;◆ alternate &nbsp;Greyed = already assigned</div>
     <div class="section-label">Starters</div>
     ${starters.map(slotHtml).join('')}
@@ -780,6 +796,44 @@ function buildTeam(){
     <p style="font-size:12px;color:#aeaeb2;margin-top:8px">★ preferred &nbsp;◆ alternate &nbsp;Grey = already assigned</p>
     `}
   `;
+}
+
+// ── Drag & Drop view ─────────────────────────────────────────────────────────
+function buildDragDrop(){
+  const sq=squad(); const pos=positions(); const t=td();
+  const available=sq.filter(p=>t.pollResults[p.name]==='Yes, count me in'||t.pollResults[p.name]==='Help! I need a ride, please');
+  const availSet=new Set(available.map(p=>p.name));
+  const others=sq.filter(p=>!availSet.has(p.name));
+  const assignedNames=new Set(Object.values(t.teamSlots));
+  const poolAvail=available.filter(p=>!assignedNames.has(p.name));
+  const poolOthers=others.filter(p=>!assignedNames.has(p.name));
+  const starters=pos.filter(p=>!p.label.startsWith('Sub'));
+  const bench=pos.filter(p=>p.label.startsWith('Sub'));
+
+  function chip(p,cls){ return `<div class="dd-chip ${cls}" data-player="${esc(p.name)}">${p.jersey??'—'} ${p.name}</div>`; }
+  function slotBox(ps){
+    const name=t.teamSlots[ps.num]||''; const isSub=ps.label.startsWith('Sub');
+    const pl=sq.find(x=>x.name===name);
+    return `<div class="dd-slot ${isSub?'bench':''}" data-slot="${ps.num}">
+      <div class="dd-slot-pos">${ps.num}. ${ps.label}</div>
+      <div class="dd-slot-player">${name?`<div class="dd-chip in-slot" data-player="${esc(name)}" data-fromslot="${ps.num}">${pl&&pl.jersey?pl.jersey:'—'} ${name}</div>`:'<span class="dd-empty">drop a player here</span>'}</div>
+    </div>`;
+  }
+
+  return `
+    <div class="dd-wrap" id="dd-wrap">
+      <div class="dd-hint">Drag a player into a position — or tap a player then tap a position. Drag a player back to the pool (or tap the pool) to remove.</div>
+      <div class="dd-pool" data-pool="1">
+        <div class="dd-pool-label">Available (${poolAvail.length})</div>
+        <div class="dd-pool-chips">${poolAvail.map(p=>chip(p,'avail')).join('')||'<span class="dd-empty">all available players assigned</span>'}</div>
+        ${poolOthers.length?`<div class="dd-pool-label" style="margin-top:10px">No response / unavailable</div>
+        <div class="dd-pool-chips">${poolOthers.map(p=>chip(p,'other')).join('')}</div>`:''}
+      </div>
+      <div class="section-label">Starters</div>
+      ${starters.map(slotBox).join('')}
+      <div class="section-label" style="margin-top:1rem">Bench</div>
+      ${bench.map(slotBox).join('')}
+    </div>`;
 }
 
 function buildField() {
@@ -1192,6 +1246,78 @@ function autoFill(){
   t.teamSlots=newSlots; storageSave(); render();
 }
 
+// ── Drag & drop interaction (touch + mouse) ──────────────────────────────────
+function ddAssign(name, toSlot){
+  const t=td();
+  for(const k of Object.keys(t.teamSlots)){ if(t.teamSlots[k]===name) delete t.teamSlots[k]; } // remove from any current slot
+  if(toSlot!=null) t.teamSlots[toSlot]=name; // bumps any previous occupant back to the pool
+  saveTeamSlots(); render();
+}
+function ddUnassign(name){
+  const t=td();
+  for(const k of Object.keys(t.teamSlots)){ if(t.teamSlots[k]===name) delete t.teamSlots[k]; }
+  saveTeamSlots(); render();
+}
+function initDragDrop(){
+  const root=document.getElementById('dd-wrap');
+  if(!root) return;
+  let selected=null;   // tap-to-place selection
+  let drag=null;       // active drag
+  function clearSel(){ selected=null; document.querySelectorAll('.dd-chip.sel').forEach(c=>c.classList.remove('sel')); }
+  function targetAt(x,y){ const el=document.elementFromPoint(x,y); return el?el.closest('.dd-slot, [data-pool]'):null; }
+  function clearOver(){ document.querySelectorAll('.dd-slot.over, [data-pool].over').forEach(s=>s.classList.remove('over')); }
+
+  root.addEventListener('pointerdown', e=>{
+    const chip=e.target.closest('.dd-chip');
+    if(chip){
+      e.preventDefault();
+      drag={ name:chip.dataset.player, moved:false, x0:e.clientX, y0:e.clientY, ghost:null, chip };
+      try{ root.setPointerCapture(e.pointerId); }catch(_){}
+      return;
+    }
+    // Tap an empty slot or the pool to place / remove the selected player
+    if(selected){
+      const slot=e.target.closest('.dd-slot');
+      if(slot){ ddAssign(selected, +slot.dataset.slot); clearSel(); return; }
+      if(e.target.closest('[data-pool]')){ ddUnassign(selected); clearSel(); return; }
+    }
+  });
+  root.addEventListener('pointermove', e=>{
+    if(!drag) return;
+    const dx=e.clientX-drag.x0, dy=e.clientY-drag.y0;
+    if(!drag.moved && Math.hypot(dx,dy)>6){
+      drag.moved=true;
+      drag.chip.classList.add('dragging');
+      drag.ghost=document.createElement('div'); drag.ghost.className='dd-ghost'; drag.ghost.textContent=drag.name;
+      document.body.appendChild(drag.ghost);
+    }
+    if(drag.moved){
+      drag.ghost.style.left=e.clientX+'px'; drag.ghost.style.top=e.clientY+'px';
+      clearOver();
+      const tgt=targetAt(e.clientX,e.clientY); if(tgt) tgt.classList.add('over');
+    }
+  });
+  root.addEventListener('pointerup', e=>{
+    if(!drag) return;
+    const d=drag; drag=null;
+    if(d.ghost) d.ghost.remove();
+    d.chip.classList.remove('dragging');
+    clearOver();
+    if(d.moved){
+      const tgt=targetAt(e.clientX,e.clientY);
+      if(tgt && tgt.classList.contains('dd-slot')) ddAssign(d.name, +tgt.dataset.slot);
+      else if(tgt && tgt.hasAttribute('data-pool')) ddUnassign(d.name);
+    } else {
+      // Tap (no drag) → toggle selection for tap-to-place
+      if(selected===d.name){ clearSel(); }
+      else { clearSel(); selected=d.name; d.chip.classList.add('sel'); }
+    }
+  });
+  root.addEventListener('pointercancel', ()=>{
+    if(drag){ if(drag.ghost) drag.ghost.remove(); drag.chip.classList.remove('dragging'); drag=null; clearOver(); }
+  });
+}
+
 function attachEvents(){
   document.querySelectorAll('.section-btn').forEach(b=>b.addEventListener('click',()=>{
     state.section=b.dataset.section;
@@ -1306,6 +1432,7 @@ function attachEvents(){
       delete td().teamSlots[+b.dataset.clear];
       saveTeamSlots(); render();
     }));
+    if(state.teamView==='dragdrop') initDragDrop();
     const af=document.getElementById('auto-fill');
     if(af) af.addEventListener('click',autoFill);
     const ct=document.getElementById('clear-team');
