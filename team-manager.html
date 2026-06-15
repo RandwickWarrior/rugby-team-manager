@@ -294,6 +294,17 @@ async function apiGet(params) {
   } catch(e) { console.warn('Backend unavailable:', e); return null; }
 }
 
+// Live match results (entered via Match Stats) override the static fixture result
+let liveResults = {}; // 'round|teamLabel' -> { result }
+function fixtureResult(teamKey, f) {
+  const live = liveResults[`${f.round}|${TEAMS[teamKey].label}`];
+  return (live && live.result) ? live.result : f.result;
+}
+async function loadResults() {
+  const d = await apiGet({ action:'results' });
+  if (d && d.success) { liveResults = d.results || {}; render(); }
+}
+
 async function apiPost(payload) {
   if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL === 'YOUR_APPS_SCRIPT_URL_HERE') return null;
   try {
@@ -552,7 +563,7 @@ function buildPoll(){
         <div style="font-size:12px;color:#8e8e93;margin-bottom:4px">Round</div>
         <select id="m-round" style="width:100%;font-size:15px">
           <option value="">— select round —</option>
-          ${(FIXTURES[state.team]||[]).map(f=>`<option value="${f.round}" ${t.round===f.round?'selected':''}>Round ${f.round} — ${f.opponent} (${f.date})${f.result?' · '+f.result:''}</option>`).join('')}
+          ${(FIXTURES[state.team]||[]).map(f=>{const r=fixtureResult(state.team,f);return `<option value="${f.round}" ${t.round===f.round?'selected':''}>Round ${f.round} — ${f.opponent} (${f.date})${r?' · '+r:''}</option>`;}).join('')}
           <option value="custom" ${t.round==='custom'?'selected':''}>Other / enter manually</option>
         </select>
       </div>
@@ -766,7 +777,7 @@ function buildTeam(){
     <div style="margin-bottom:12px">
       <div style="font-size:12px;color:#8e8e93;margin-bottom:4px">Round — ${TEAMS[state.team].label}</div>
       <select id="team-round" style="width:100%;font-size:15px">
-        ${(FIXTURES[state.team]||[]).map(f=>`<option value="${f.round}" ${t.round===f.round?'selected':''}>Round ${f.round} — ${f.opponent} (${f.date})${f.result?' · '+f.result:''}</option>`).join('')}
+        ${(FIXTURES[state.team]||[]).map(f=>{const r=fixtureResult(state.team,f);return `<option value="${f.round}" ${t.round===f.round?'selected':''}>Round ${f.round} — ${f.opponent} (${f.date})${r?' · '+r:''}</option>`;}).join('')}
         <option value="custom" ${t.round==='custom'?'selected':''}>Other / manual</option>
       </select>
     </div>
@@ -1539,6 +1550,7 @@ render();
 
 // After initial render, sync responses and team from sheet in background
 (async () => {
+  loadResults(); // live match results for the round selectors
   const responsesChanged = await syncResponsesFromSheet();
   const teamChanged = await loadTeamFromSheet();
   if (responsesChanged || teamChanged) {

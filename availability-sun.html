@@ -104,10 +104,16 @@
   .clear-btn { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
   @keyframes fadeDown { from { opacity: 0; transform: translateY(-16px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  .nav-btn { display:flex; align-items:center; justify-content:center; gap:6px; width:100%; padding:13px 16px; border-radius:var(--radius-sm); font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600; text-decoration:none; cursor:pointer; -webkit-tap-highlight-color:transparent; transition:all 0.15s; }
+  .nav-btn:active { transform:scale(0.98); }
+  .nav-cross { background:rgba(0,201,167,0.15); border:1px solid rgba(0,201,167,0.4); color:#00c9a7; }
+  .nav-menu { background:var(--card); border:1px solid var(--border); color:var(--muted); margin-bottom:1rem; }
 </style>
 </head>
 <body>
 <div class="container">
+
+  <a href="index.html" class="nav-btn nav-menu">‹ Go to Main Menu</a>
 
   <div class="header">
     <div class="club-badge">🏉</div>
@@ -121,6 +127,8 @@
       <select id="round-picker" class="round-picker"></select>
     </div>
   </div>
+
+  <a href="availability-fri.html" class="nav-btn nav-cross" style="margin-bottom:1.5rem">🌙 Go to Friday Availability form ›</a>
 
   <form id="avail-form">
 
@@ -226,6 +234,8 @@
     <div class="count-stat"><div class="count-val" style="color:#aeaeb2" id="cnt-none">–</div><div class="count-lbl">No reply</div></div>
   </div>
 
+  <a href="availability-fri.html" class="nav-btn nav-cross" style="margin-top:1.5rem">🌙 Go to Friday Availability form ›</a>
+
 </div>
 <script>
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
@@ -250,11 +260,25 @@
     return FIXTURES.map(f=>({...f,jsDate:new Date(f.isoDate)})).filter(f=>f.jsDate>=today).sort((a,b)=>a.jsDate-b.jsDate)[0]||null;
   }
   let nextFixture = getNextFixture() || FIXTURES[FIXTURES.length-1]; // current target round (mutable)
+  let liveResults = {}; // 'round|team' -> { result }
 
   const roundPicker = document.getElementById('round-picker');
-  roundPicker.innerHTML = FIXTURES.map(f =>
-    `<option value="${f.round}" ${nextFixture && f.round===nextFixture.round?'selected':''}>Round ${f.round} — ${f.opponent} (${f.date})</option>`
-  ).join('');
+  function populateRoundPicker() {
+    roundPicker.innerHTML = FIXTURES.map(f => {
+      const live = liveResults[`${f.round}|${TEAM}`];
+      const res = (live && live.result) ? ' · ' + live.result : '';
+      return `<option value="${f.round}" ${nextFixture && f.round===nextFixture.round?'selected':''}>Round ${f.round} — ${f.opponent} (${f.date})${res}</option>`;
+    }).join('');
+  }
+  populateRoundPicker();
+
+  async function loadResults() {
+    try {
+      const d = await (await fetch(APPS_SCRIPT_URL + '?action=results')).json();
+      if (d && d.success) { liveResults = d.results || {}; populateRoundPicker(); }
+    } catch(e) { /* ignore */ }
+  }
+  loadResults();
 
   function applyFixture() {
     if (!nextFixture) return;
