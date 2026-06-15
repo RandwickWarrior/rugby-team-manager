@@ -971,9 +971,15 @@ function renderMdtThumbs() {
   if (!t) return;
   t.innerHTML = mdtLineupUrls.map((u,i)=>`<div class="thumb"><img src="${u}"><span class="thumb-num">${i+1}</span><button type="button" class="thumb-remove" data-i="${i}">×</button></div>`).join('');
   t.querySelectorAll('.thumb-remove').forEach(b=>b.addEventListener('click',()=>{ mdtLineupImages.splice(+b.dataset.i,1); mdtLineupUrls.splice(+b.dataset.i,1); renderMdtThumbs(); }));
+  const has = mdtLineupUrls.length > 0;
   const area = document.getElementById('mdt-upload-area');
   const prompt = document.getElementById('mdt-upload-prompt');
-  if (area && prompt) { const has = mdtLineupUrls.length>0; area.classList.toggle('has-image',has); prompt.style.display = has?'none':'block'; }
+  if (area && prompt) { area.classList.toggle('has-image',has); prompt.style.display = has?'none':'block'; }
+  // Show the "Read line-up" button only once screenshots are ready
+  const btn = document.getElementById('mdt-analyze');
+  if (btn) { btn.style.display = has ? 'block' : 'none'; if (has) btn.textContent = '🔍 Read line-up'; }
+  const status = document.getElementById('mdt-status');
+  if (status) status.textContent = has ? `${mdtLineupUrls.length} screenshot${mdtLineupUrls.length>1?'s':''} ready — tap “Read line-up”` : '';
 }
 
 function findRosterName(name) {
