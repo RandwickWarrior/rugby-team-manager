@@ -122,14 +122,6 @@
     </div>
   </div>
 
-  <div class="count-bar" id="count-bar">
-    <div class="count-stat"><div class="count-val" style="color:#34c759" id="cnt-avail">–</div><div class="count-lbl">Available</div></div>
-    <div class="count-stat"><div class="count-val" style="color:#f5a623" id="cnt-unsure">–</div><div class="count-lbl">Unsure</div></div>
-    <div class="count-stat"><div class="count-val" style="color:#ff3b30" id="cnt-out">–</div><div class="count-lbl">Out</div></div>
-    <div class="count-stat"><div class="count-val" style="color:#ff9500" id="cnt-ride">–</div><div class="count-lbl">Needs ride</div></div>
-    <div class="count-stat"><div class="count-val" style="color:#aeaeb2" id="cnt-none">–</div><div class="count-lbl">No reply</div></div>
-  </div>
-
   <form id="avail-form">
 
     <div class="section step step-1">
@@ -225,6 +217,15 @@
     <button class="copy-responses-btn" id="copy-responses">Copy all responses</button>
   </div>
 
+  <div class="step-label" style="margin-top:1.5rem">Round total — all responses</div>
+  <div class="count-bar" id="count-bar">
+    <div class="count-stat"><div class="count-val" style="color:#34c759" id="cnt-avail">–</div><div class="count-lbl">Available</div></div>
+    <div class="count-stat"><div class="count-val" style="color:#f5a623" id="cnt-unsure">–</div><div class="count-lbl">Unsure</div></div>
+    <div class="count-stat"><div class="count-val" style="color:#ff3b30" id="cnt-out">–</div><div class="count-lbl">Out</div></div>
+    <div class="count-stat"><div class="count-val" style="color:#ff9500" id="cnt-ride">–</div><div class="count-lbl">Needs ride</div></div>
+    <div class="count-stat"><div class="count-val" style="color:#aeaeb2" id="cnt-none">–</div><div class="count-lbl">No reply</div></div>
+  </div>
+
 </div>
 <script>
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
@@ -269,7 +270,7 @@
     checkExisting();
   });
 
-  const TOTAL_PLAYERS = Array.from(playerSelect.options).filter(o => o.value).length;
+  const TOTAL_PLAYERS = Array.from(document.getElementById('player-select').options).filter(o => o.value).length;
   let lastResponses = {};
 
   async function fetchRoundResponses() {
@@ -316,7 +317,6 @@
     renderCounts();
     updateExistingFlag();
   }
-  checkExisting(); // populate counts on load
 
   async function postToScript(payload) {
     try { const r = await fetch(APPS_SCRIPT_URL, { method:'POST', body:JSON.stringify(payload) }); return await r.json(); }
@@ -443,6 +443,7 @@
   });
 
   renderSavedPanel();
+  checkExisting(); // populate live counts on load (after playerSelect is defined)
 </script>
 </body>
 </html>
