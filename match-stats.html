@@ -201,6 +201,17 @@
         </div>
       </div>
       <div id="match-info" style="font-size:13px;color:var(--muted);margin-top:4px;min-height:18px"></div>
+      <div class="grid-2" style="margin-top:10px">
+        <div>
+          <div class="field-label">Our score (from stats)</div>
+          <div id="our-score" style="background:rgba(0,201,167,0.1);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:20px;font-weight:700;color:var(--teal);text-align:center">0</div>
+        </div>
+        <div>
+          <div class="field-label">Opponent score</div>
+          <input type="number" id="opp-score" min="0" inputmode="numeric" placeholder="0" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--white);font-family:'DM Sans',sans-serif;font-size:18px;font-weight:700;text-align:center;padding:9px 12px">
+        </div>
+      </div>
+      <div id="result-preview" style="font-size:13px;font-weight:600;text-align:center;margin-top:8px;min-height:18px"></div>
     </div>
 
     <!-- Screenshot upload -->
@@ -331,7 +342,32 @@ function updateTotals() {
   document.getElementById('tot-tries').textContent = tries;
   document.getElementById('tot-conv').textContent = conv;
   document.getElementById('tot-pen').textContent = pen;
-  document.getElementById('tot-pts').textContent = tries*5 + conv*2 + pen*3;
+  const pts = tries*5 + conv*2 + pen*3;
+  document.getElementById('tot-pts').textContent = pts;
+  const osEl = document.getElementById('our-score'); if (osEl) osEl.textContent = pts;
+  updateResultPreview();
+}
+
+function ourScoreFromStats() {
+  let tries=0, conv=0, pen=0;
+  Object.values(stats).forEach(s => { tries+=s.tries; conv+=s.convMade; pen+=s.penalties; });
+  return tries*5 + conv*2 + pen*3;
+}
+function computeResult(ourScore, oppScore) {
+  if (oppScore === '' || oppScore === null || isNaN(oppScore)) return '';
+  const o = +oppScore;
+  if (ourScore > o) return `W ${ourScore}–${o}`;
+  if (ourScore < o) return `L ${ourScore}–${o}`;
+  return `D ${ourScore}–${o}`;
+}
+function updateResultPreview() {
+  const el = document.getElementById('result-preview'); if (!el) return;
+  const oppEl = document.getElementById('opp-score');
+  const opp = oppEl ? oppEl.value : '';
+  const result = computeResult(ourScoreFromStats(), opp);
+  if (!result) { el.textContent = ''; return; }
+  const color = result.startsWith('W') ? 'var(--try)' : result.startsWith('L') ? '#ff3b30' : 'var(--pen)';
+  el.innerHTML = `Result: <span style="color:${color}">${result}</span>`;
 }
 
 function buildPlayerForm() {
@@ -426,13 +462,23 @@ function updateMatchInfo() {
   currentRound = round || null;
   const f = fixtures.find(x => x.round === round);
   const info = document.getElementById('match-info');
-  info.textContent = f ? `${f.date} · vs ${f.opponent}${f.result?' · '+f.result:''}` : '';
+  const res = f ? effectiveResult(currentTeam, f) : '';
+  info.textContent = f ? `${f.date} · vs ${f.opponent}${res?' · '+res:''}` : '';
+  // Pre-fill opponent score from an existing saved result (so re-entry edits it)
+  const oppEl = document.getElementById('opp-score');
+  if (oppEl) {
+    const label = currentTeam==='seahorses'?'Coogee 11':'Coogee Barbarians 11';
+    const live = f ? liveResults[`${f.round}|${label}`] : null;
+    oppEl.value = (live && live.oppScore!=null && live.oppScore!=='') ? live.oppScore : '';
+  }
+  updateResultPreview();
 }
 
 document.getElementById('team-select').addEventListener('change', e => {
   currentTeam = e.target.value; populateRounds();
 });
 document.getElementById('round-select').addEventListener('change', updateMatchInfo);
+document.getElementById('opp-score').addEventListener('input', updateResultPreview);
 
 // Screenshot upload — supports multiple images
 const screenshotInput = document.getElementById('screenshot-input');
@@ -620,7 +666,21 @@ document.getElementById('submit-btn').addEventListener('click', async () => {
       })
     });
     const data = await res.json();
-    if (data.success) showSuccess(fixture, records);
+    if (data.success) {
+      // Save the match result too (our score from stats + entered opponent score)
+      const teamLabelStr = currentTeam === 'seahorses' ? 'Coogee 11' : 'Coogee Barbarians 11';
+      const ourScore = ourScoreFromStats();
+      const oppVal = document.getElementById('opp-score').value;
+      const result = computeResult(ourScore, oppVal);
+      if (result) {
+        fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({
+          action:'saveResult', round:currentRound, team:teamLabelStr,
+          opponent: fixture ? fixture.opponent : '', date: fixture ? fixture.isoDate : '',
+          ourScore, oppScore:+oppVal, result
+        })});
+      }
+      showSuccess(fixture, records);
+    }
     else { showToast('Save failed — try again'); btn.textContent='Save Match Stats'; btn.disabled=false; }
   } catch(e) {
     showToast('Connection error — saved locally');
@@ -661,6 +721,21 @@ document.getElementById('another-btn').addEventListener('click', () => {
 // ── Season tab ────────────────────────────────────────────────────────────
 let seasonMatchStats = [];
 let seasonLoaded = false;
+let liveResults = {}; // 'round|teamLabel' -> { result, ourScore, oppScore }
+
+async function loadResults() {
+  try {
+    const d = await (await fetch(APPS_SCRIPT_URL + '?action=results')).json();
+    if (d && d.success) liveResults = d.results || {};
+  } catch(e) { /* keep */ }
+}
+
+// Effective result: live (entered via stats) wins over the static fixture result
+function effectiveResult(teamKey, f) {
+  const label = teamKey === 'seahorses' ? 'Coogee 11' : 'Coogee Barbarians 11';
+  const live = liveResults[`${f.round}|${label}`];
+  return (live && live.result) ? live.result : f.result;
+}
 
 async function loadSeasonData() {
   try {
@@ -668,6 +743,7 @@ async function loadSeasonData() {
     const data = await res.json();
     if (data.success) seasonMatchStats = data.records || [];
   } catch(e) { /* offline — show fixtures only */ }
+  await loadResults();
   seasonLoaded = true;
   renderSeason();
 }
@@ -679,12 +755,15 @@ function resultPill(r) {
   return `<span class="pill ${cls}">${r}</span>`;
 }
 
-function fixtureRows(fixtures) {
-  return fixtures.map(f=>`
+function fixtureRows(fixtures, teamKey) {
+  return fixtures.map(f=>{
+    const result = effectiveResult(teamKey, f);
+    return `
     <div class="summary-row">
       <span class="summary-key">R${f.round} vs ${f.opponent}</span>
-      <span class="summary-val">${resultPill(f.result)||'<span style="color:var(--muted);font-weight:400">Upcoming</span>'}</span>
-    </div>`).join('');
+      <span class="summary-val">${resultPill(result)||'<span style="color:var(--muted);font-weight:400">Upcoming</span>'}</span>
+    </div>`;
+  }).join('');
 }
 
 function renderSeason() {
@@ -769,9 +848,9 @@ function renderSeason() {
 
   el.innerHTML = `
     <div class="section-label">Coogee 11 — Friday nights</div>
-    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(FIXTURES.seahorses)}</div>
+    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(FIXTURES.seahorses,'seahorses')}</div>
     <div class="section-label">Coogee Barbarians 11 — Sunday mornings</div>
-    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(FIXTURES.barbarians)}</div>
+    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(FIXTURES.barbarians,'barbarians')}</div>
     ${scorersSection}
     ${kickersSection}
     ${!seasonMatchStats.length && seasonLoaded ? '<div style="font-size:12px;color:var(--muted);margin-top:1rem;text-align:center">No scoring data yet — enter match stats to populate.</div>' : ''}`;

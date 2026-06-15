@@ -371,6 +371,7 @@ function playerSlot(playerName, round, team) {
 }
 let trainingData  = {}; // { date: { sessionLabel, records: { player: status } } }
 let matchStats    = []; // [ { round, team, player, tries, convMade, convMissed, penalties, points } ]
+let liveResults   = {}; // 'round|teamLabel' -> { result, ourScore, oppScore }
 let lastSyncTime  = null;
 let activeTab     = 'season';
 let sortBy        = 'name';
@@ -399,6 +400,10 @@ async function loadAllData() {
     // Load match stats
     const ms = await apiGet({ action:'getMatchStats' });
     if (ms && ms.success) matchStats = ms.records || [];
+
+    // Load match results (entered via Match Stats — override static fixtures)
+    const rs = await apiGet({ action:'results' });
+    if (rs && rs.success) liveResults = rs.results || {};
 
     // Load availability for rounds 1-8 both teams
     const teams = ['Coogee 11','Coogee Barbarians 11'];
@@ -774,16 +779,21 @@ function buildSeasonTab() {
 
   function resultPill(r) {
     if (!r) return '';
+    if (r === 'Washout') return '<span class="pill pill-wo">Washout</span>';
     const cls = r.startsWith('W')?'pill-w':r.startsWith('L')?'pill-l':'pill-d';
     return `<span class="pill ${cls}">${r}</span>`;
   }
 
-  function fixtureRows(fixtures) {
-    return fixtures.map(f=>`
+  function fixtureRows(fixtures, teamLabel) {
+    return fixtures.map(f=>{
+      const live = liveResults[`${f.r}|${teamLabel}`];
+      const result = (live && live.result) ? live.result : f.result; // entered result wins
+      return `
       <div class="summary-row">
         <span class="summary-key">R${f.r} vs ${f.opp}</span>
-        <span class="summary-val">${resultPill(f.result)||'<span style="color:var(--muted);font-weight:400">Upcoming</span>'}</span>
-      </div>`).join('');
+        <span class="summary-val">${resultPill(result)||'<span style="color:var(--muted);font-weight:400">Upcoming</span>'}</span>
+      </div>`;
+    }).join('');
   }
 
   // Aggregate scoring per player from matchStats
@@ -868,9 +878,9 @@ function buildSeasonTab() {
 
   return `
     <div class="section-label">Coogee 11 — Friday nights</div>
-    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(friFixtures)}</div>
+    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(friFixtures,'Coogee 11')}</div>
     <div class="section-label">Coogee Barbarians 11 — Sunday mornings</div>
-    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(sunFixtures)}</div>
+    <div class="summary-card" style="margin-bottom:1rem">${fixtureRows(sunFixtures,'Coogee Barbarians 11')}</div>
     ${scoringSection}`;
 }
 
