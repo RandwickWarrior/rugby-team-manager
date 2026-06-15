@@ -599,6 +599,11 @@ analyzeBtn.addEventListener('click', async () => {
     });
     const data = await res.json();
     if (data.success && data.stats) {
+      if (!confirmScreenshotMatch(data.stats)) {
+        analyzeStatus.textContent = '⚠️ Cancelled — screenshot did not match the selected round';
+        analyzeBtn.disabled = false; analyzeBtn.textContent = '🔍 Re-analyse Screenshot' + (screenshotImages.length>1?'s ('+screenshotImages.length+')':'');
+        return;
+      }
       applyExtractedStats(data.stats);
       analyzeStatus.textContent = `✅ Stats extracted from ${screenshotImages.length} screenshot${screenshotImages.length>1?'s':''} — review and adjust below`;
     } else {
@@ -610,6 +615,24 @@ analyzeBtn.addEventListener('click', async () => {
   analyzeBtn.disabled = false;
   analyzeBtn.textContent = '🔍 Re-analyse Screenshot' + (screenshotImages.length>1?'s ('+screenshotImages.length+')':'');
 });
+
+// Cross-check the screenshot's round/date against the selected round; prompt on mismatch
+function confirmScreenshotMatch(extracted) {
+  const f = FIXTURES[currentTeam].find(x => x.round === currentRound);
+  if (!f) return true;
+  const shotRound = extracted.roundNumber;
+  const shotDate  = extracted.matchDate; // expected ISO YYYY-MM-DD
+  const reasons = [];
+  if (shotRound != null && shotRound !== '' && +shotRound !== +currentRound) {
+    reasons.push(`• Screenshot shows Round ${shotRound}, you selected Round ${currentRound}`);
+  }
+  if (shotDate && /^\d{4}-\d{2}-\d{2}$/.test(shotDate) && shotDate !== f.isoDate) {
+    reasons.push(`• Screenshot date ${shotDate}, selected match ${f.date} (${f.isoDate})`);
+  }
+  if (!reasons.length) return true;
+  return confirm('⚠️ This screenshot may not match the round you selected:\n\n' + reasons.join('\n') +
+    `\n\nSelected: Round ${currentRound} vs ${f.opponent} (${f.date}).\n\nApply these stats to Round ${currentRound} anyway?`);
+}
 
 function applyExtractedStats(extracted) {
   // extracted: { tries:[{player,team}], conversions:[{player,made,team}], penalties:[{player,team}] }
