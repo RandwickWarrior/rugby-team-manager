@@ -185,7 +185,7 @@
     <span>🏆</span>
     <div style="color:rgba(255,255,255,0.7)">
       <strong style="color:#fff">Recent results</strong><br>
-      Coogee 11 L 36–12 vs Maroubra Missiles · R6 Washout (Fri &amp; Sun)
+      <span id="recent-results">Coogee 11 L 36–12 vs Maroubra Missiles · R6 Washout (Fri &amp; Sun)</span>
     </div>
   </div>
 
@@ -252,5 +252,28 @@
   <p class="footer" style="margin-top:6px;opacity:0.4;font-size:11px">https://randwickwarrior.github.io/rugby-team-manager</p>
 
 </div>
+
+<script>
+  // Show the most recent result for each team from the live results store
+  (async () => {
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
+    try {
+      const d = await (await fetch(APPS_SCRIPT_URL + '?action=results')).json();
+      if (!d || !d.success) return;
+      const byTeam = {};
+      Object.values(d.results || {}).forEach(r => {
+        if (!r.result || r.result === 'Washout') return;
+        const cur = byTeam[r.team];
+        if (!cur || +r.round > +cur.round) byTeam[r.team] = r;
+      });
+      const parts = [];
+      const fri = byTeam['Coogee 11'];
+      const sun = byTeam['Coogee Barbarians 11'];
+      if (fri) parts.push(`Coogee 11 ${fri.result} vs ${fri.opponent}`);
+      if (sun) parts.push(`Barbarians ${sun.result} vs ${sun.opponent}`);
+      if (parts.length) document.getElementById('recent-results').textContent = parts.join(' · ');
+    } catch(e) { /* keep static fallback */ }
+  })();
+</script>
 </body>
 </html>

@@ -472,6 +472,27 @@ function updateMatchInfo() {
     oppEl.value = (live && live.oppScore!=null && live.oppScore!=='') ? live.oppScore : '';
   }
   updateResultPreview();
+  applyExistingStats(); // load any stats already saved for this round/team
+}
+
+// Load existing per-player stats for the selected round and pre-fill the steppers
+async function applyExistingStats() {
+  PLAYERS.forEach(p => { stats[p.name] = {tries:0,convMade:0,convMissed:0,penalties:0}; });
+  buildPlayerForm(); updateTotals();
+  if (!currentRound) return;
+  const label = currentTeam==='seahorses'?'Coogee 11':'Coogee Barbarians 11';
+  if (!seasonMatchStats.length) {
+    try { const d=await (await fetch(APPS_SCRIPT_URL+'?action=getMatchStats')).json(); if (d&&d.success) seasonMatchStats=d.records||[]; } catch(e){}
+  }
+  let any = false;
+  seasonMatchStats.filter(r => +r.round===currentRound && r.team===label).forEach(r => {
+    const name = findPlayer(r.player) || r.player;
+    if (stats[name]) { // assign (each row holds that player's match totals) — robust to duplicates
+      stats[name] = { tries:+r.tries||0, convMade:+r.convMade||0, convMissed:+r.convMissed||0, penalties:+r.penalties||0 };
+      any = true;
+    }
+  });
+  if (any) { buildPlayerForm(); updateTotals(); showToast('Loaded existing stats for this round'); }
 }
 
 document.getElementById('team-select').addEventListener('change', e => {
