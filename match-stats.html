@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Match Stats — Coogee Seahorses</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -151,6 +152,30 @@
   .menu-btn { display:inline-flex; align-items:center; gap:4px; font-size:14px; font-weight:600; color:var(--teal); background:var(--card); border:1px solid var(--border); border-radius:10px; padding:9px 16px; text-decoration:none; transition:all 0.15s; -webkit-tap-highlight-color:transparent; }
   .menu-btn:active { transform:scale(0.97); background:rgba(0,201,167,0.08); }
   .menu-btn-bottom { display:block; text-align:center; margin-top:1.75rem; }
+
+  /* Draw Details badge */
+  .draw-badge { position:relative; width:100%; aspect-ratio:4/5; border-radius:16px; overflow:hidden; background:#0a1628; box-shadow:0 8px 30px rgba(0,0,0,0.4); }
+  .draw-bg { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 30%; }
+  .draw-overlay { position:absolute; inset:0; background:linear-gradient(180deg, rgba(10,22,40,0.55) 0%, rgba(10,22,40,0.15) 35%, rgba(10,22,40,0.5) 62%, rgba(10,22,40,0.92) 100%); }
+  .draw-content { position:absolute; inset:0; display:flex; flex-direction:column; padding:22px 22px 26px; color:#fff; }
+  .draw-top { display:flex; align-items:center; gap:9px; }
+  .draw-crest { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#00c9a7,#00a085); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+  .draw-club { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:0.06em; line-height:1; }
+  .draw-club span { color:#00c9a7; }
+  .draw-sub { font-size:10px; color:rgba(255,255,255,0.75); letter-spacing:0.08em; text-transform:uppercase; margin-top:2px; }
+  .draw-when { margin-top:auto; }
+  .draw-day { font-family:'Bebas Neue',sans-serif; font-size:clamp(2.2rem,11vw,3.2rem); line-height:0.95; letter-spacing:0.03em; color:#00c9a7; text-shadow:0 2px 14px rgba(0,0,0,0.7); }
+  .draw-vs { font-family:'Bebas Neue',sans-serif; font-size:clamp(1.6rem,8vw,2.4rem); line-height:1; letter-spacing:0.02em; text-shadow:0 2px 14px rgba(0,0,0,0.8); margin-top:2px; }
+  .draw-meta { margin-top:12px; display:flex; flex-direction:column; gap:5px; font-size:14px; font-weight:500; text-shadow:0 1px 8px rgba(0,0,0,0.9); }
+  .draw-meta .row { display:flex; align-items:center; gap:8px; }
+  .draw-warm { margin-top:13px; background:rgba(0,201,167,0.92); color:#06251f; font-weight:700; font-size:13px; padding:9px 13px; border-radius:10px; line-height:1.35; }
+  .draw-rsvp { margin-top:10px; font-size:11px; color:rgba(255,255,255,0.85); letter-spacing:0.02em; }
+  /* Controls */
+  .draw-photo-area { border:2px dashed rgba(0,201,167,0.35); border-radius:12px; padding:1.1rem; text-align:center; cursor:pointer; position:relative; margin-bottom:10px; }
+  .draw-photo-area.has { border-style:solid; border-color:var(--teal); }
+  .draw-slider { width:100%; }
+  .draw-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+  .draw-caption-box { background:rgba(255,255,255,0.05); border:1px solid var(--border); border-radius:10px; padding:11px 13px; font-size:13px; color:var(--white); line-height:1.5; white-space:pre-wrap; margin-top:10px; }
 </style>
 </head>
 <body>
@@ -168,7 +193,8 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="season">Season</button>
     <button class="tab-btn" data-tab="enter">Enter Stats</button>
-    <button class="tab-btn" data-tab="team">Match Day Team</button>
+    <button class="tab-btn" data-tab="team">Match Team</button>
+    <button class="tab-btn" data-tab="draw">Draw Details</button>
   </div>
 
   <!-- Season tab -->
@@ -176,6 +202,9 @@
 
   <!-- Match Day Team tab -->
   <div id="team-tab" style="display:none"><div class="loading">Loading…</div></div>
+
+  <!-- Draw Details tab -->
+  <div id="draw-tab" style="display:none"></div>
 
   <!-- Enter Match Stats tab -->
   <div id="enter-tab" style="display:none">
@@ -909,10 +938,212 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.getElementById('season-tab').style.display = tab==='season' ? 'block' : 'none';
     document.getElementById('enter-tab').style.display  = tab==='enter'  ? 'block' : 'none';
     document.getElementById('team-tab').style.display   = tab==='team'   ? 'block' : 'none';
+    document.getElementById('draw-tab').style.display    = tab==='draw'   ? 'block' : 'none';
     if (tab==='season' && !seasonLoaded) loadSeasonData();
     if (tab==='team') initTeamTab();
+    if (tab==='draw') initDrawTab();
   });
 });
+
+// ── Draw Details tab ────────────────────────────────────────────────────────
+let drawTeam = 'seahorses';
+let drawRound = null;
+let drawPhotoUrl = '';   // uploaded background photo (data URL)
+let drawPhotoPos = 30;   // vertical focus % (object-position)
+
+function pad2(n){ return String(n).padStart(2,'0'); }
+function minus30(timeStr) {
+  // "8:00pm" / "10:20am" -> 30 min earlier, same format
+  const m = String(timeStr||'').trim().match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+  if (!m) return timeStr || '';
+  let h = +m[1] % 12; if (m[3].toLowerCase()==='pm') h += 12;
+  let total = h*60 + (+m[2]) - 30;
+  if (total < 0) total += 24*60;
+  let hh = Math.floor(total/60), mm = total%60;
+  const ap = hh>=12 ? 'pm' : 'am'; let h12 = hh%12; if (h12===0) h12=12;
+  return `${h12}:${pad2(mm)}${ap}`;
+}
+function dayWord(team){ return team==='seahorses' ? 'Friday' : 'Sunday'; }
+function mapsLink(venue){ return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(venue + ', Sydney NSW'); }
+function availLink(team){
+  const base = location.href.replace(/[^/]*$/, '');
+  return base + (team==='seahorses' ? 'availability-fri.html' : 'availability-sun.html');
+}
+
+function drawFixture(){ return (FIXTURES[drawTeam]||[]).find(f => f.round === drawRound); }
+
+function initDrawTab() {
+  if (drawRound === null) {
+    const f = nextFixtureFor(drawTeam);
+    drawRound = f ? f.round : (FIXTURES[drawTeam][0] && FIXTURES[drawTeam][0].round);
+  }
+  renderDrawTab();
+}
+
+function nextFixtureFor(team){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const up = (FIXTURES[team]||[]).filter(f=>new Date(f.isoDate)>=today).sort((a,b)=>new Date(a.isoDate)-new Date(b.isoDate));
+  return up[0] || (FIXTURES[team]||[])[ (FIXTURES[team]||[]).length-1 ];
+}
+
+function drawMessage() {
+  const f = drawFixture(); if (!f) return '';
+  const warm = minus30(f.time);
+  return `This ${dayWord(drawTeam)} we are playing against ${f.opponent} at ${f.venue} with ${f.time} kickoff. Please be there by ${warm} for warmup.`;
+}
+
+function renderDrawTab() {
+  const el = document.getElementById('draw-tab');
+  const f = drawFixture();
+  const roundOpts = (FIXTURES[drawTeam]||[]).map(x =>
+    `<option value="${x.round}" ${x.round===drawRound?'selected':''}>Round ${x.round} — ${x.opponent} (${x.date})</option>`).join('');
+  const warm = f ? minus30(f.time) : '';
+
+  el.innerHTML = `
+    <div class="section-card">
+      <div class="grid-2">
+        <div><div class="field-label">Team</div>
+          <select id="draw-team">
+            <option value="seahorses" ${drawTeam==='seahorses'?'selected':''}>Coogee 11 (Friday)</option>
+            <option value="barbarians" ${drawTeam==='barbarians'?'selected':''}>Coogee Barbarians 11 (Sunday)</option>
+          </select>
+        </div>
+        <div><div class="field-label">Round</div>
+          <select id="draw-round">${roundOpts}</select>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-label">Background photo (optional)</div>
+      <div class="draw-photo-area ${drawPhotoUrl?'has':''}" id="draw-photo-area">
+        <input type="file" class="upload-input" id="draw-photo-input" accept="image/*">
+        <div class="upload-text" style="${drawPhotoUrl?'display:none':''}"><div style="font-size:30px">📷</div><strong>Tap to choose a team photo</strong><br>It becomes the badge background</div>
+        <div style="${drawPhotoUrl?'':'display:none'};font-size:13px;color:var(--teal)">✓ Photo loaded — adjust focus below</div>
+      </div>
+      ${drawPhotoUrl ? `
+        <div class="field-label">Vertical focus (move to the faces)</div>
+        <input type="range" min="0" max="100" value="${drawPhotoPos}" class="draw-slider" id="draw-pos">
+        <button class="btn btn-sm" id="draw-facefocus" style="margin-top:8px">✨ Auto-focus faces</button>
+      ` : ''}
+    </div>
+
+    <div class="section-label">Preview</div>
+    <div class="draw-badge" id="draw-badge">
+      ${drawPhotoUrl ? `<img class="draw-bg" id="draw-bg-img" src="${drawPhotoUrl}" style="object-position:center ${drawPhotoPos}%">`
+                     : `<div class="draw-bg" style="background:linear-gradient(135deg,#0a1628,#132040)"></div>`}
+      <div class="draw-overlay"></div>
+      <div class="draw-content">
+        <div class="draw-top">
+          <div class="draw-crest">🏉</div>
+          <div><div class="draw-club">Coogee <span>Seahorses</span></div><div class="draw-sub">${drawTeam==='seahorses'?'Coogee 11 · Friday':'Barbarians 11 · Sunday'} · U11</div></div>
+        </div>
+        <div class="draw-when">
+          <div class="draw-day">This ${dayWord(drawTeam)}</div>
+          <div class="draw-vs">vs ${f?f.opponent:'TBC'}</div>
+          <div class="draw-meta">
+            <div class="row">📅 ${f?f.date:''}</div>
+            <div class="row">⏱ ${f?f.time:''} kick-off</div>
+            <div class="row">📍 ${f?f.venue:''}</div>
+          </div>
+          <div class="draw-warm">⚡ Be there by ${warm} for warm-up</div>
+          <div class="draw-rsvp">RSVP your availability — link in the message ›</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="draw-actions">
+      <button class="btn btn-primary" id="draw-copy-img">📸 Copy image</button>
+      <button class="btn" id="draw-copy-txt">📋 Copy message</button>
+    </div>
+
+    <div class="section-label" style="margin-top:1.25rem">Message (paste as the caption)</div>
+    <div class="draw-caption-box" id="draw-caption">${drawCaption()}</div>
+
+    <div style="font-size:11px;color:var(--muted);margin-top:8px">Tip: paste the image first, then paste the message as the caption — the links are clickable in the text but not in the image.</div>`;
+
+  attachDrawEvents();
+}
+
+function drawCaption() {
+  const f = drawFixture(); if (!f) return '';
+  return `🏉 ${drawTeam==='seahorses'?'Coogee 11':'Coogee Barbarians 11'} — Round ${f.round}\n\n` +
+    drawMessage() + `\n\n` +
+    `✅ Availability: ${availLink(drawTeam)}\n` +
+    `📍 Venue map: ${mapsLink(f.venue)}`;
+}
+
+function attachDrawEvents() {
+  document.getElementById('draw-team').addEventListener('change', e => {
+    drawTeam = e.target.value;
+    const nf = nextFixtureFor(drawTeam); drawRound = nf ? nf.round : null;
+    renderDrawTab();
+  });
+  document.getElementById('draw-round').addEventListener('change', e => { drawRound = +e.target.value; renderDrawTab(); });
+
+  const input = document.getElementById('draw-photo-input');
+  if (input) input.addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    try { drawPhotoUrl = await fileToJpeg(file, 1600, 0.9); drawPhotoPos = 30; renderDrawTab(); }
+    catch(err){ showToast('Could not load photo'); }
+  });
+
+  const pos = document.getElementById('draw-pos');
+  if (pos) pos.addEventListener('input', () => {
+    drawPhotoPos = +pos.value;
+    const img = document.getElementById('draw-bg-img');
+    if (img) img.style.objectPosition = `center ${drawPhotoPos}%`;
+  });
+
+  const ff = document.getElementById('draw-facefocus');
+  if (ff) ff.addEventListener('click', autoFocusFaces);
+
+  const ci = document.getElementById('draw-copy-img');
+  if (ci) ci.addEventListener('click', copyDrawImage);
+  const ct = document.getElementById('draw-copy-txt');
+  if (ct) ct.addEventListener('click', () => {
+    navigator.clipboard.writeText(drawCaption()).then(()=>{ ct.textContent='✓ Copied!'; setTimeout(()=>ct.textContent='📋 Copy message',2000); });
+  });
+}
+
+async function autoFocusFaces() {
+  const btn = document.getElementById('draw-facefocus');
+  if (!('FaceDetector' in window)) { showToast('Auto-focus not supported on this browser — use the slider'); return; }
+  btn.textContent = '⏳ Finding faces…';
+  try {
+    const img = document.getElementById('draw-bg-img');
+    const fd = new FaceDetector({ fastMode:true, maxDetectedFaces:10 });
+    const faces = await fd.detect(img);
+    if (faces.length) {
+      const avg = faces.reduce((s,f)=>s + (f.boundingBox.top + f.boundingBox.height/2), 0) / faces.length;
+      drawPhotoPos = Math.round(Math.max(0, Math.min(100, avg / img.naturalHeight * 100)));
+      img.style.objectPosition = `center ${drawPhotoPos}%`;
+      const slider = document.getElementById('draw-pos'); if (slider) slider.value = drawPhotoPos;
+      showToast(`Focused on ${faces.length} face${faces.length>1?'s':''}`);
+    } else showToast('No faces detected — use the slider');
+  } catch(e) { showToast('Face detection failed — use the slider'); }
+  btn.textContent = '✨ Auto-focus faces';
+}
+
+async function copyDrawImage() {
+  const badge = document.getElementById('draw-badge');
+  const btn = document.getElementById('draw-copy-img');
+  if (typeof html2canvas === 'undefined') { showToast('Image tool unavailable'); return; }
+  btn.textContent = '⏳ Generating…'; btn.disabled = true;
+  try {
+    const canvas = await html2canvas(badge, { scale:3, useCORS:true, allowTaint:true, backgroundColor:null, logging:false });
+    canvas.toBlob(async blob => {
+      try {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        btn.textContent = '✓ Copied!'; setTimeout(()=>{ btn.textContent='📸 Copy image'; btn.disabled=false; }, 2500);
+      } catch(err) {
+        const url = URL.createObjectURL(blob); const a=document.createElement('a');
+        a.href=url; a.download=`draw-${drawTeam}-r${drawRound}.png`; a.click(); URL.revokeObjectURL(url);
+        btn.textContent='📸 Copy image'; btn.disabled=false;
+      }
+    }, 'image/png');
+  } catch(e) { showToast('Could not generate image'); btn.textContent='📸 Copy image'; btn.disabled=false; }
+}
 
 // ── Match Day Team tab ──────────────────────────────────────────────────────
 // U11 position labels by slot (1-12 starters, 13-18 bench)
