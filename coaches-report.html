@@ -129,6 +129,8 @@
   .g-avail  { color:#f5a623; }
   .g-out    { color:#ff3b30; }
   .g-none   { color:rgba(255,255,255,0.18); }
+  .g-washout{ color:#6eb0ff; font-size:10px; }
+  .grid-table td.g-tot-p sup, .grid-table .g-totrow sup { color:#6eb0ff; font-weight:700; }
   .grid-table td.g-tot-p { color:#34c759; font-weight:700; border-left:1px solid var(--border); }
   .grid-table td.g-tot-a { color:#f5a623; font-weight:700; }
   .grid-table th.g-tot { border-left:1px solid var(--border); }
@@ -375,6 +377,8 @@ let liveResults   = {}; // 'round|teamLabel' -> { result, ourScore, oppScore }
 let lastSyncTime  = null;
 let activeTab     = 'season';
 let sortBy        = 'name';
+let gridShowAll   = false;      // Grid: show all rounds vs recent only
+const GRID_RECENT = 5;          // rounds shown by default
 
 function showToast(msg) {
   const t = document.getElementById('toast'); t.textContent=msg; t.classList.add('show');
@@ -884,22 +888,22 @@ function buildSeasonTab() {
     ${scoringSection}`;
 }
 
-// ── Grid tab — played / available / not available, by round ──────────────────
+// ── Grid tab — played / available / not available / washout, by round ─────────
 function buildGridTab() {
   // Rounds that have occurred (played or washout) per team
   const FRI_FIX = [
     {r:1,res:'L 41–12'},{r:2,res:'W 36–12'},{r:3,res:'L 36–12'},
-    {r:4,res:'W 31–19'},{r:5,res:'L 36–12'},{r:6,res:'Washout'}
+    {r:4,res:'W 31–19'},{r:5,res:'L 36–12'},{r:6,res:'Washout'},{r:7,res:'W 54–0'}
   ];
   const SUN_FIX = [
     {r:1,res:'W 26–5'},{r:2,res:'L 14–29'},{r:3,res:'D 26–26'},
-    {r:4,res:'W 36–7'},{r:5,res:'W 43–5'},{r:6,res:'Washout'}
+    {r:4,res:'W 36–7'},{r:5,res:'W 43–5'},{r:6,res:'Washout'},{r:7,res:'W 28–24'}
   ];
 
-  // Map a player's round status to a coloured cell; played cells show position
+  // Coloured cell; played shows position, washout-selected shows AW
   function statusCell(status, washout, slot) {
     if (status==='Started' || status==='Sub') {
-      if (washout) return { t:'A', cls:'g-avail', title:'Selected — washout (no game)' };
+      if (washout) return { t:'AW', cls:'g-washout', title:'Selected — washout (no game played)' };
       if (slot && slot<=12) return { t:U11_POS_ABBR[slot-1], cls:'g-played', title:'Played: '+U11_POS[slot-1] };
       if (slot && slot>12)  return { t:'S', cls:'g-played', title:'Played: bench' };
       return { t:'✓', cls:'g-played', title:'Played' };
@@ -908,42 +912,44 @@ function buildGridTab() {
     if (status==='Unavailable')  return { t:'✗', cls:'g-out',   title:'Not available' };
     return { t:'·', cls:'g-none', title:'No response' };
   }
-
   function classify(status, wo) {
-    if (status==='Started' || status==='Sub') return wo ? 'avail' : 'played';
+    if (status==='Started' || status==='Sub') return wo ? 'washout' : 'played';
     if (status==='Not Selected') return 'avail';
     if (status==='Unavailable')  return 'out';
     return 'none';
   }
 
-  function teamTable(label, teamName, fixtures) {
-    // Gather players who have any data for this team
+  function teamTable(label, teamName, allFixtures) {
+    const visible = gridShowAll ? allFixtures : allFixtures.slice(-GRID_RECENT);
+    const startIdx = allFixtures.length - visible.length;
+
     const rows = [];
     SQUAD.forEach(p => {
-      const cells = fixtures.map(f => {
-        const resp  = liveResponses[`${f.r}|${teamName}`];
+      const cells = allFixtures.map(f => {
+        const resp = liveResponses[`${f.r}|${teamName}`];
         return { status: deriveStatus(p.name, effectiveSlots(f.r, teamName), resp), wo: f.res === 'Washout', slot: playerSlot(p.name, f.r, teamName) };
       });
       if (cells.some(c => c.status !== '')) rows.push({ p, cells });
     });
 
-    // Column totals
-    const colPlayed = fixtures.map(()=>0);
-    const colAvail  = fixtures.map(()=>0);
-    rows.forEach(({cells}) => cells.forEach((c,i) => {
-      const k = classify(c.status, c.wo);
-      if (k==='played') colPlayed[i]++; else if (k==='avail') colAvail[i]++;
+    // Column totals (visible columns only)
+    const colPlayed = visible.map(()=>0), colWash = visible.map(()=>0), colAvail = visible.map(()=>0);
+    rows.forEach(({cells}) => visible.forEach((f,vi) => {
+      const k = classify(cells[startIdx+vi].status, cells[startIdx+vi].wo);
+      if (k==='played') colPlayed[vi]++; else if (k==='washout') colWash[vi]++; else if (k==='avail') colAvail[vi]++;
     }));
 
     function rowHtml({p, cells}) {
-      let played=0, avail=0;
-      const tds = cells.map(c => {
-        const k = classify(c.status, c.wo);
-        if (k==='played') played++; else if (k==='avail') avail++;
+      // Totals over ALL rounds (even hidden ones)
+      let played=0, washout=0, avail=0;
+      cells.forEach(c => { const k=classify(c.status,c.wo); if(k==='played')played++; else if(k==='washout')washout++; else if(k==='avail')avail++; });
+      const tds = visible.map((f,vi) => {
+        const c = cells[startIdx+vi];
         const cell = statusCell(c.status, c.wo, c.slot);
         return `<td class="${cell.cls}" title="${cell.title}" style="font-size:11px">${cell.t}</td>`;
       }).join('');
-      return `<tr><td class="g-name">${p.name}</td>${tds}<td class="g-tot-p">${played||'·'}</td><td class="g-tot-a">${avail||'·'}</td></tr>`;
+      const pCell = `${played||'·'}${washout?`<sup>${washout}</sup>`:''}`;
+      return `<tr><td class="g-name">${p.name}</td>${tds}<td class="g-tot-p">${pCell}</td><td class="g-tot-a">${avail||'·'}</td></tr>`;
     }
     function groupRows(group) {
       return rows.filter(x => x.p.group === group)
@@ -951,20 +957,21 @@ function buildGridTab() {
         .map(rowHtml).join('');
     }
 
-    const headers = fixtures.map(f =>
-      `<th title="${f.res}">R${f.r}${f.res==='Washout'?'*':''}</th>`).join('');
+    const headers = visible.map(f => `<th title="${f.res}">R${f.r}${f.res==='Washout'?'*':''}</th>`).join('');
     const fwd = groupRows('Forward'), back = groupRows('Back');
-    const grandP = colPlayed.reduce((a,b)=>a+b,0);
-    const grandA = colAvail.reduce((a,b)=>a+b,0);
-    const span = fixtures.length + 3;
-    const totPlayed = `<tr class="g-totrow"><td class="g-name">Played</td>${colPlayed.map(n=>`<td class="g-played">${n||'·'}</td>`).join('')}<td class="g-played">${grandP}</td><td></td></tr>`;
-    const totAvail  = `<tr class="g-totrow"><td class="g-name">Avail</td>${colAvail.map(n=>`<td class="g-avail">${n||'·'}</td>`).join('')}<td></td><td class="g-avail">${grandA}</td></tr>`;
+    // Grand totals over ALL rounds
+    const grandPlayed = rows.reduce((s,{cells})=>s+cells.filter(c=>classify(c.status,c.wo)==='played').length,0);
+    const grandWash   = rows.reduce((s,{cells})=>s+cells.filter(c=>classify(c.status,c.wo)==='washout').length,0);
+    const grandAvail  = rows.reduce((s,{cells})=>s+cells.filter(c=>classify(c.status,c.wo)==='avail').length,0);
+    const span = visible.length + 3;
+    const totPlayed = `<tr class="g-totrow"><td class="g-name">Played</td>${visible.map((f,vi)=> f.res==='Washout' ? `<td class="g-washout">${colWash[vi]?'AW'+colWash[vi]:'·'}</td>` : `<td class="g-played">${colPlayed[vi]||'·'}</td>`).join('')}<td class="g-played">${grandPlayed}${grandWash?`<sup>${grandWash}</sup>`:''}</td><td></td></tr>`;
+    const totAvail  = `<tr class="g-totrow"><td class="g-name">Avail</td>${visible.map((f,vi)=>`<td class="g-avail">${colAvail[vi]||'·'}</td>`).join('')}<td></td><td class="g-avail">${grandAvail}</td></tr>`;
 
     return `
       <div class="section-label">${label}</div>
       <div style="overflow-x:auto;border-radius:12px;border:1px solid var(--border);margin-bottom:1.5rem">
       <table class="grid-table">
-        <thead><tr><th class="g-name">Player</th>${headers}<th class="g-tot" title="Games played">P</th><th title="Available, not played">A</th></tr></thead>
+        <thead><tr><th class="g-name">Player</th>${headers}<th class="g-tot" title="Games played (superscript = washout selections)">P</th><th title="Available, not played">A</th></tr></thead>
         <tbody>
           ${fwd ? `<tr class="g-grp"><td colspan="${span}">Forwards</td></tr>${fwd}` : ''}
           ${back ? `<tr class="g-grp"><td colspan="${span}">Backs</td></tr>${back}` : ''}
@@ -975,19 +982,26 @@ function buildGridTab() {
       </div>`;
   }
 
+  const maxRounds = Math.max(FRI_FIX.length, SUN_FIX.length);
+  const hidden = Math.max(0, maxRounds - GRID_RECENT);
+  const toggle = (maxRounds > GRID_RECENT)
+    ? `<button class="filter-btn" id="grid-toggle" style="margin-bottom:1rem">${gridShowAll ? `Show recent ${GRID_RECENT} rounds only` : `Show all ${maxRounds} rounds (${hidden} earlier hidden)`}</button>`
+    : '';
+
   const legend = `
     <div class="grid-legend">
-      <span><b class="g-played">LHP</b> Played (shows position)</span>
+      <span><b class="g-played">LHP</b> Played (position)</span>
       <span><b class="g-played">S</b> Played: bench</span>
+      <span><b class="g-washout">AW</b> Selected, washout</span>
       <span><b class="g-avail">A</b> Available, didn't play</span>
       <span><b class="g-out">✗</b> Not available</span>
       <span><b class="g-none">·</b> No response</span>
-      <span>R6* = washout</span>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:1rem">Played cells show the position abbreviation (hover for full name). As-played line-ups take priority over the midweek selection. P / A columns &amp; rows = totals.</div>`;
+    <div style="font-size:11px;color:var(--muted);margin-bottom:1rem">R6* = washout. Played cells show position (hover for full name). P = games played, with a <sup style="color:#6eb0ff">superscript</sup> for washout selections (not counted as available). Totals cover all rounds even when earlier ones are hidden.</div>`;
 
   return `<div class="section-label">Availability, selection &amp; positions grid</div>
     ${legend}
+    ${toggle}
     ${teamTable('Coogee 11 — Friday', 'Coogee 11', FRI_FIX)}
     ${teamTable('Coogee Barbarians 11 — Sunday', 'Coogee Barbarians 11', SUN_FIX)}`;
 }
@@ -999,6 +1013,8 @@ function attachTabEvents() {
       renderTab('players');
     });
   });
+  const gt = document.getElementById('grid-toggle');
+  if (gt) gt.addEventListener('click', () => { gridShowAll = !gridShowAll; renderTab('grid'); });
 }
 </script>
 </body>
