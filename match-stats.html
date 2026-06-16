@@ -1033,8 +1033,9 @@ function renderDrawTab() {
 
     <div class="section-label">Preview</div>
     <div class="draw-badge" id="draw-badge">
-      ${drawPhotoUrl ? `<img class="draw-bg" id="draw-bg-img" src="${drawPhotoUrl}" style="object-position:center ${drawPhotoPos}%">`
-                     : `<div class="draw-bg" style="background:linear-gradient(135deg,#0a1628,#132040)"></div>`}
+      ${drawPhotoUrl
+        ? `<div class="draw-bg" id="draw-bg-img" style="background-image:url('${drawPhotoUrl}');background-size:cover;background-position:center ${drawPhotoPos}%"></div>`
+        : `<div class="draw-bg" style="background:linear-gradient(135deg,#0a1628,#132040)"></div>`}
       <div class="draw-overlay"></div>
       <div class="draw-content">
         <div class="draw-top">
@@ -1106,8 +1107,8 @@ function attachDrawEvents() {
   if (pos) pos.addEventListener('input', () => {
     drawPhotoPos = +pos.value;
     localStorage.setItem('drawPhotoPos', drawPhotoPos);
-    const img = document.getElementById('draw-bg-img');
-    if (img) img.style.objectPosition = `center ${drawPhotoPos}%`;
+    const bg = document.getElementById('draw-bg-img');
+    if (bg) bg.style.backgroundPosition = `center ${drawPhotoPos}%`;
   });
 
   const ff = document.getElementById('draw-facefocus');
@@ -1126,13 +1127,17 @@ async function autoFocusFaces() {
   if (!('FaceDetector' in window)) { showToast('Auto-focus not supported on this browser — use the slider'); return; }
   btn.textContent = '⏳ Finding faces…';
   try {
-    const img = document.getElementById('draw-bg-img');
+    const tmpImg = new Image();
+    tmpImg.src = drawPhotoUrl;
+    await new Promise((res, rej) => { tmpImg.onload = res; tmpImg.onerror = rej; });
     const fd = new FaceDetector({ fastMode:true, maxDetectedFaces:10 });
-    const faces = await fd.detect(img);
+    const faces = await fd.detect(tmpImg);
     if (faces.length) {
       const avg = faces.reduce((s,f)=>s + (f.boundingBox.top + f.boundingBox.height/2), 0) / faces.length;
-      drawPhotoPos = Math.round(Math.max(0, Math.min(100, avg / img.naturalHeight * 100)));
-      img.style.objectPosition = `center ${drawPhotoPos}%`;
+      drawPhotoPos = Math.round(Math.max(0, Math.min(100, avg / tmpImg.naturalHeight * 100)));
+      localStorage.setItem('drawPhotoPos', drawPhotoPos);
+      const bg = document.getElementById('draw-bg-img');
+      if (bg) bg.style.backgroundPosition = `center ${drawPhotoPos}%`;
       const slider = document.getElementById('draw-pos'); if (slider) slider.value = drawPhotoPos;
       showToast(`Focused on ${faces.length} face${faces.length>1?'s':''}`);
     } else showToast('No faces detected — use the slider');
