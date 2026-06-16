@@ -307,26 +307,26 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDD
 
 const FIXTURES = {
   seahorses: [
-    { round:1, date:'Fri 24 Apr', isoDate:'2026-04-24', opponent:'Burraneer Gold',        result:'L 41–12' },
-    { round:2, date:'Fri 1 May',  isoDate:'2026-05-01', opponent:'Clovelly Eagles Blue',  result:'W 36–12' },
-    { round:3, date:'Fri 8 May',  isoDate:'2026-05-08', opponent:'Rockdale',              result:'L 36–12' },
-    { round:4, date:'Fri 15 May', isoDate:'2026-05-15', opponent:'Burraneer Blue',        result:'W 31–19' },
-    { round:5, date:'Fri 22 May', isoDate:'2026-05-22', opponent:'Maroubra Missiles',     result:'L 36–12' },
-    { round:6, date:'Fri 29 May', isoDate:'2026-05-29', opponent:'Oatley',                result:'Washout' },
-    { round:7, date:'Fri 12 Jun', isoDate:'2026-06-12', opponent:'Clovelly Eagles White', result:'W 54–0' },
-    { round:8, date:'Fri 19 Jun', isoDate:'2026-06-19', opponent:'Burraneer Gold',        result:'' },
+    { round:1, date:'Fri 24 Apr', isoDate:'2026-04-24', opponent:'Burraneer Gold',        venue:'John Dwyer Park',           time:'7:10pm',  result:'L 41–12' },
+    { round:2, date:'Fri 1 May',  isoDate:'2026-05-01', opponent:'Clovelly Eagles Blue',  venue:'Nagle Park Field 2',        time:'5:30pm',  result:'W 36–12' },
+    { round:3, date:'Fri 8 May',  isoDate:'2026-05-08', opponent:'Rockdale',              venue:'C.A Redmond Oval',          time:'7:20pm',  result:'L 36–12' },
+    { round:4, date:'Fri 15 May', isoDate:'2026-05-15', opponent:'Burraneer Blue',        venue:'Nagle Park Field 1',        time:'7:20pm',  result:'W 31–19' },
+    { round:5, date:'Fri 22 May', isoDate:'2026-05-22', opponent:'Maroubra Missiles',     venue:'Nagle Park Field 2',        time:'5:30pm',  result:'L 36–12' },
+    { round:6, date:'Fri 29 May', isoDate:'2026-05-29', opponent:'Oatley',                venue:'Nagle Park Field 2',        time:'5:30pm',  result:'Washout' },
+    { round:7, date:'Fri 12 Jun', isoDate:'2026-06-12', opponent:'Clovelly Eagles White', venue:'Nagle Park Field 1',        time:'8:00pm',  result:'W 54–0' },
+    { round:8, date:'Fri 19 Jun', isoDate:'2026-06-19', opponent:'Burraneer Gold',        venue:'Nagle Park Field 1',        time:'8:00pm',  result:'' },
   ],
   barbarians: [
-    { round:1, date:'Sun 26 Apr', isoDate:'2026-04-26', opponent:'Hunters Hill Black',    result:'W 26–5' },
-    { round:2, date:'Sun 3 May',  isoDate:'2026-05-03', opponent:'Norths Pirates',        result:'L 14–29' },
-    { round:3, date:'Sun 10 May', isoDate:'2026-05-10', opponent:'Wakehurst',             result:'D 26–26' },
-    { round:4, date:'Sun 17 May', isoDate:'2026-05-17', opponent:'Wahroonga Gold',        result:'W 36–7' },
-    { round:5, date:'Sun 24 May', isoDate:'2026-05-24', opponent:'Mosman Dolphins',       result:'W 43–5' },
-    { round:6, date:'Sun 31 May', isoDate:'2026-05-31', opponent:'Hornsby Lions',         result:'Washout' },
-    { round:7, date:'Sun 14 Jun', isoDate:'2026-06-14', opponent:'Allambie Green',        result:'' },
-    { round:8, date:'Sun 21 Jun', isoDate:'2026-06-21', opponent:'Hunters Hill Black',    result:'' },
-    { round:9, date:'Sun 26 Jul', isoDate:'2026-07-26', opponent:'Norths Pirates',        result:'' },
-    { round:10,date:'Sun 2 Aug',  isoDate:'2026-08-02', opponent:'Wakehurst',             result:'' },
+    { round:1, date:'Sun 26 Apr', isoDate:'2026-04-26', opponent:'Hunters Hill Black',    venue:'Boronia Park Field 1',      time:'9:30am',  result:'W 26–5' },
+    { round:2, date:'Sun 3 May',  isoDate:'2026-05-03', opponent:'Norths Pirates',        venue:'Nagle Park Field 1',        time:'11:00am', result:'L 14–29' },
+    { round:3, date:'Sun 10 May', isoDate:'2026-05-10', opponent:'Wakehurst',             venue:'Wakehurst Rugby Park',      time:'9:50am',  result:'D 26–26' },
+    { round:4, date:'Sun 17 May', isoDate:'2026-05-17', opponent:'Wahroonga Gold',        venue:'Nagle Park Field 1',        time:'9:10am',  result:'W 36–7' },
+    { round:5, date:'Sun 24 May', isoDate:'2026-05-24', opponent:'Mosman Dolphins',       venue:'Nagle Park Field 2',        time:'9:00am',  result:'W 43–5' },
+    { round:6, date:'Sun 31 May', isoDate:'2026-05-31', opponent:'Hornsby Lions',         venue:'Mark Taylor Oval, Waitara', time:'9:30am',  result:'Washout' },
+    { round:7, date:'Sun 14 Jun', isoDate:'2026-06-14', opponent:'Allambie Green',        venue:'Nagle Park Field 2',        time:'10:00am', result:'' },
+    { round:8, date:'Sun 21 Jun', isoDate:'2026-06-21', opponent:'Hunters Hill Black',    venue:'Nagle Park Field 2',        time:'10:00am', result:'' },
+    { round:9, date:'Sun 26 Jul', isoDate:'2026-07-26', opponent:'Norths Pirates',        venue:'Tunks Park 3',              time:'10:20am', result:'' },
+    { round:10,date:'Sun 2 Aug',  isoDate:'2026-08-02', opponent:'Wakehurst',             venue:'Nagle Park Field 2',        time:'10:00am', result:'' },
   ]
 };
 
@@ -948,8 +948,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 // ── Draw Details tab ────────────────────────────────────────────────────────
 let drawTeam = 'seahorses';
 let drawRound = null;
-let drawPhotoUrl = '';   // uploaded background photo (data URL)
-let drawPhotoPos = 30;   // vertical focus % (object-position)
+let drawPhotoUrl = localStorage.getItem('drawPhotoUrl') || '';
+let drawPhotoPos = +(localStorage.getItem('drawPhotoPos') || 30);
 
 function pad2(n){ return String(n).padStart(2,'0'); }
 function minus30(timeStr) {
@@ -964,9 +964,12 @@ function minus30(timeStr) {
   return `${h12}:${pad2(mm)}${ap}`;
 }
 function dayWord(team){ return team==='seahorses' ? 'Friday' : 'Sunday'; }
-function mapsLink(venue){ return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(venue + ', Sydney NSW'); }
+function mapsLink(venue){
+  const loc = (venue||'').replace(/\s+Field\s+\d+/i, '');
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(loc + ', Sydney NSW');
+}
 function availLink(team){
-  const base = location.href.replace(/[^/]*$/, '');
+  const base = 'https://randwickwarrior.github.io/rugby-team-manager/';
   return base + (team==='seahorses' ? 'availability-fri.html' : 'availability-sun.html');
 }
 
@@ -1058,7 +1061,7 @@ function renderDrawTab() {
     </div>
 
     <div class="section-label" style="margin-top:1.25rem">Message (paste as the caption)</div>
-    <div class="draw-caption-box" id="draw-caption">${drawCaption()}</div>
+    <div class="draw-caption-box" id="draw-caption">${drawCaptionHtml()}</div>
 
     <div style="font-size:11px;color:var(--muted);margin-top:8px">Tip: paste the image first, then paste the message as the caption — the links are clickable in the text but not in the image.</div>`;
 
@@ -1073,6 +1076,13 @@ function drawCaption() {
     `📍 Venue map: ${mapsLink(f.venue)}`;
 }
 
+function drawCaptionHtml() {
+  const text = drawCaption();
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/(https?:\/\/\S+)/g, '<span style="color:#8a9ab8">$1</span>');
+}
+
 function attachDrawEvents() {
   document.getElementById('draw-team').addEventListener('change', e => {
     drawTeam = e.target.value;
@@ -1084,13 +1094,18 @@ function attachDrawEvents() {
   const input = document.getElementById('draw-photo-input');
   if (input) input.addEventListener('change', async e => {
     const file = e.target.files[0]; if (!file) return;
-    try { drawPhotoUrl = await fileToJpeg(file, 1600, 0.9); drawPhotoPos = 30; renderDrawTab(); }
-    catch(err){ showToast('Could not load photo'); }
+    try {
+      drawPhotoUrl = await fileToJpeg(file, 1600, 0.9); drawPhotoPos = 30;
+      localStorage.setItem('drawPhotoUrl', drawPhotoUrl);
+      localStorage.setItem('drawPhotoPos', drawPhotoPos);
+      renderDrawTab();
+    } catch(err){ showToast('Could not load photo'); }
   });
 
   const pos = document.getElementById('draw-pos');
   if (pos) pos.addEventListener('input', () => {
     drawPhotoPos = +pos.value;
+    localStorage.setItem('drawPhotoPos', drawPhotoPos);
     const img = document.getElementById('draw-bg-img');
     if (img) img.style.objectPosition = `center ${drawPhotoPos}%`;
   });
