@@ -1146,7 +1146,8 @@ async function copyDrawImage() {
   if (typeof html2canvas === 'undefined') { showToast('Image tool unavailable'); return; }
   btn.textContent = '⏳ Generating…'; btn.disabled = true;
   try {
-    const canvas = await html2canvas(badge, { scale:3, useCORS:true, allowTaint:true, backgroundColor:null, logging:false });
+    const rect = badge.getBoundingClientRect();
+    const canvas = await html2canvas(badge, { scale:3, useCORS:true, allowTaint:true, backgroundColor:null, logging:false, width:rect.width, height:rect.height });
     canvas.toBlob(async blob => {
       try {
         await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
