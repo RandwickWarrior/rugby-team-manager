@@ -327,7 +327,13 @@ document.querySelectorAll('.pin-btn[data-n]').forEach(btn => {
       if (pinEntry === PIN) {
         document.getElementById('pin-screen').style.display = 'none';
         document.getElementById('main-container').style.display = 'block';
-        loadAllData();
+        if (loadCache()) {
+          setSyncStatus('cached');
+          renderTab(activeTab);
+          loadAllData(); // refresh in background
+        } else {
+          loadAllData();
+        }
       } else {
         updatePinDots(true);
         document.getElementById('pin-error').textContent = 'Incorrect PIN — try again';
@@ -348,6 +354,35 @@ document.getElementById('lock-btn').addEventListener('click', () => {
   document.getElementById('pin-screen').style.display = 'flex';
   updatePinDots();
 });
+
+// ── Cache ─────────────────────────────────────────────────────────────────────
+const CACHE_KEY = 'seahorses_report_v1';
+
+function saveCache() {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      trainingData, matchStats, liveResults,
+      liveResponses, liveTeamSlots, livePlayedSlots,
+      cachedAt: Date.now()
+    }));
+  } catch(e) {}
+}
+
+function loadCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return false;
+    const c = JSON.parse(raw);
+    trainingData    = c.trainingData    || {};
+    matchStats      = c.matchStats      || [];
+    liveResults     = c.liveResults     || {};
+    liveResponses   = c.liveResponses   || {};
+    liveTeamSlots   = c.liveTeamSlots   || {};
+    livePlayedSlots = c.livePlayedSlots || {};
+    lastSyncTime    = c.cachedAt ? new Date(c.cachedAt) : null;
+    return true;
+  } catch(e) { return false; }
+}
 
 // ── Data store ────────────────────────────────────────────────────────────────
 let liveResponses = {}; // { 'round|team': { playerName: {availability,needsRide,notes} } }
@@ -397,38 +432,44 @@ async function apiGet(params) {
 async function loadAllData() {
   setSyncStatus('loading');
   try {
-    // Load training
-    const tr = await apiGet({ action:'getTraining' });
-    if (tr && tr.success) trainingData = tr.sessions || {};
-
-    // Load match stats
-    const ms = await apiGet({ action:'getMatchStats' });
-    if (ms && ms.success) matchStats = ms.records || [];
-
-    // Load match results (entered via Match Stats — override static fixtures)
-    const rs = await apiGet({ action:'results' });
-    if (rs && rs.success) liveResults = rs.results || {};
-
-    // Load availability for rounds 1-8 both teams
     const teams = ['Coogee 11','Coogee Barbarians 11'];
+
+    // Fire everything in parallel
+    const [tr, ms, rs, ...roundResults] = await Promise.all([
+      apiGet({ action:'getTraining' }),
+      apiGet({ action:'getMatchStats' }),
+      apiGet({ action:'results' }),
+      ...teams.flatMap(team =>
+        Array.from({length:8}, (_,i) => i+1).flatMap(r => [
+          apiGet({ action:'responses', round:r, team }),
+          apiGet({ action:'team',      round:r, team, type:'selected' }),
+          apiGet({ action:'team',      round:r, team, type:'played'   }),
+        ])
+      )
+    ]);
+
+    if (tr && tr.success) trainingData = tr.sessions || {};
+    if (ms && ms.success) matchStats   = ms.records  || [];
+    if (rs && rs.success) liveResults  = rs.results  || {};
+
+    // Unpack round results (48 responses, 3 per round per team)
+    let idx = 0;
     for (const team of teams) {
-      for (let r=1; r<=8; r++) {
-        const data = await apiGet({ action:'responses', round:r, team });
-        if (data && data.success && Object.keys(data.responses||{}).length > 0) {
+      for (let r = 1; r <= 8; r++) {
+        const data = roundResults[idx++];
+        const td   = roundResults[idx++];
+        const pd   = roundResults[idx++];
+        if (data && data.success && Object.keys(data.responses||{}).length > 0)
           liveResponses[`${r}|${team}`] = data.responses;
-        }
-        const td = await apiGet({ action:'team', round:r, team, type:'selected' });
-        if (td && td.success && Object.keys(td.slots||{}).length > 0) {
+        if (td && td.success && Object.keys(td.slots||{}).length > 0)
           liveTeamSlots[`${r}|${team}`] = td.slots;
-        }
-        const pd = await apiGet({ action:'team', round:r, team, type:'played' });
-        if (pd && pd.success && Object.keys(pd.slots||{}).length > 0) {
+        if (pd && pd.success && Object.keys(pd.slots||{}).length > 0)
           livePlayedSlots[`${r}|${team}`] = pd.slots;
-        }
       }
     }
 
     lastSyncTime = new Date();
+    saveCache();
     setSyncStatus('ok');
     renderTab(activeTab);
   } catch(e) {
@@ -439,8 +480,9 @@ async function loadAllData() {
 function setSyncStatus(state) {
   const dot = document.getElementById('sync-dot');
   const label = document.getElementById('sync-label');
-  if (state==='loading') { dot.style.background='#ff9500'; label.textContent='Syncing data…'; }
-  else if (state==='ok') { dot.style.background='var(--green)'; label.textContent='Last synced '+lastSyncTime.toLocaleTimeString(); }
+  if (state==='loading') { dot.style.background='#ff9500'; label.textContent='Refreshing in background…'; }
+  else if (state==='ok') { dot.style.background='var(--green)'; label.textContent='Live data — synced '+lastSyncTime.toLocaleTimeString(); }
+  else if (state==='cached') { dot.style.background='#ff9500'; label.textContent='Cached data from '+lastSyncTime.toLocaleString('en-AU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' — refreshing…'; }
   else { dot.style.background='var(--red)'; label.textContent='Sync failed — showing cached data'; }
 }
 
