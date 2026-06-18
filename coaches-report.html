@@ -300,10 +300,19 @@ const SQUAD = [
     fri:[], sun:['','','','In'], tr:[]},
 ];
 
-const FRI_ROUNDS = 5; // played rounds (R6 was washout)
-const SUN_ROUNDS = 5;
 const FRI_WASHOUT = [6]; // rounds where game was not played
 const SUN_WASHOUT = [6];
+
+// Count non-washout rounds that have any data in the sheet (grows automatically as season progresses)
+function playedRoundCount(team) {
+  const washouts = team === 'Coogee 11' ? FRI_WASHOUT : SUN_WASHOUT;
+  const allRounds = new Set([
+    ...Object.keys(liveTeamSlots).filter(k=>k.endsWith('|'+team)).map(k=>+k.split('|')[0]),
+    ...Object.keys(livePlayedSlots).filter(k=>k.endsWith('|'+team)).map(k=>+k.split('|')[0]),
+    ...Object.keys(liveResponses).filter(k=>k.endsWith('|'+team)).map(k=>+k.split('|')[0])
+  ]);
+  return [...allRounds].filter(r => !washouts.includes(r)).length;
+}
 const TRAINING_SESSIONS = [
   '11 Mar','18 Mar','25 Mar','1 Apr','8 Apr','15 Apr','22 Apr','29 Apr'
 ];
@@ -594,8 +603,10 @@ function calcPlayerStats(player) {
     else if (status==='Unavailable')  { sunOut++; }
   });
 
-  const friPct      = FRI_ROUNDS > 0 ? Math.round(friPlayed/FRI_ROUNDS*100) : 0;
-  const sunPct      = SUN_ROUNDS > 0 ? Math.round(sunPlayed/SUN_ROUNDS*100) : 0;
+  const friTotal    = playedRoundCount('Coogee 11');
+  const sunTotal    = playedRoundCount('Coogee Barbarians 11');
+  const friPct      = friTotal > 0 ? Math.round(friPlayed/friTotal*100) : 0;
+  const sunPct      = sunTotal > 0 ? Math.round(sunPlayed/sunTotal*100) : 0;
   const friAvailPct = friAvail > 0 ? Math.round(friPlayed/friAvail*100) : null;
   const sunAvailPct = sunAvail > 0 ? Math.round(sunPlayed/sunAvail*100) : null;
 
