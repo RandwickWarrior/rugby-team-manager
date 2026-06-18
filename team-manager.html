@@ -917,7 +917,8 @@ function buildDragDrop(){
   function slotBox(ps){
     const name=t.teamSlots[ps.num]||''; const isSub=ps.label.startsWith('Sub');
     const pl=sq.find(x=>x.name===name);
-    return `<div class="dd-slot ${isSub?'bench':''}" data-slot="${ps.num}">
+    return `<div class="dd-slot ${isSub?'bench':''}" data-slot="${ps.num}" style="position:relative">
+      ${name?`<button class="slot-clear" data-clear="${ps.num}" title="Return to pool">×</button>`:''}
       <div class="dd-slot-pos">${ps.num}. ${ps.label}</div>
       <div class="dd-slot-player">${name?`<div class="dd-chip in-slot" data-player="${esc(name)}" data-fromslot="${ps.num}">${pl&&pl.jersey?pl.jersey:'—'} ${name}</div>`:'<span class="dd-empty">drop a player here</span>'}</div>
     </div>`;
