@@ -833,17 +833,17 @@ function buildDragDrop(){
 
   return `
     <div class="dd-wrap" id="dd-wrap">
-      <div class="dd-hint">Drag a player into a position — or tap a player then tap a position. Drag a player back to the pool (or tap the pool) to remove.</div>
-      <div class="dd-pool" data-pool="1">
-        <div class="dd-pool-label">Available (${poolAvail.length})</div>
-        <div class="dd-pool-chips">${poolAvail.map(p=>chip(p,'avail')).join('')||'<span class="dd-empty">all available players assigned</span>'}</div>
-        ${poolOthers.length?`<div class="dd-pool-label" style="margin-top:10px">No response / unavailable</div>
-        <div class="dd-pool-chips">${poolOthers.map(p=>chip(p,'other')).join('')}</div>`:''}
-      </div>
+      <div class="dd-hint">Tap a player to select, then tap a position to place. Or drag — the screen will scroll if you drag near the edge.</div>
       <div class="section-label">Starters</div>
       ${starters.map(slotBox).join('')}
       <div class="section-label" style="margin-top:1rem">Bench</div>
       ${bench.map(slotBox).join('')}
+      <div class="section-label" style="margin-top:1rem">Available (${poolAvail.length})</div>
+      <div class="dd-pool" data-pool="1">
+        <div class="dd-pool-chips">${poolAvail.map(p=>chip(p,'avail')).join('')||'<span class="dd-empty">all available players assigned</span>'}</div>
+        ${poolOthers.length?`<div class="dd-pool-label" style="margin-top:10px">No response / unavailable</div>
+        <div class="dd-pool-chips">${poolOthers.map(p=>chip(p,'other')).join('')}</div>`:''}
+      </div>
     </div>`;
 }
 
@@ -1274,6 +1274,21 @@ function initDragDrop(){
   if(!root) return;
   let selected=null;   // tap-to-place selection
   let drag=null;       // active drag
+  let scrollRaf=null;  // requestAnimationFrame handle for auto-scroll
+  const SCROLL_ZONE=100; // px from edge that triggers scroll
+  const SCROLL_MAX=18;   // max px per frame
+
+  function autoScroll(clientY){
+    cancelAnimationFrame(scrollRaf);
+    const vh=window.innerHeight;
+    let speed=0;
+    if(clientY > vh-SCROLL_ZONE) speed = Math.round(SCROLL_MAX*(clientY-(vh-SCROLL_ZONE))/SCROLL_ZONE);
+    else if(clientY < SCROLL_ZONE) speed = -Math.round(SCROLL_MAX*(SCROLL_ZONE-clientY)/SCROLL_ZONE);
+    if(speed===0) return;
+    function step(){ window.scrollBy(0,speed); scrollRaf=requestAnimationFrame(step); }
+    scrollRaf=requestAnimationFrame(step);
+  }
+
   function clearSel(){ selected=null; document.querySelectorAll('.dd-chip.sel').forEach(c=>c.classList.remove('sel')); }
   function targetAt(x,y){ const el=document.elementFromPoint(x,y); return el?el.closest('.dd-slot, [data-pool]'):null; }
   function clearOver(){ document.querySelectorAll('.dd-slot.over, [data-pool].over').forEach(s=>s.classList.remove('over')); }
@@ -1304,6 +1319,7 @@ function initDragDrop(){
     }
     if(drag.moved){
       drag.ghost.style.left=e.clientX+'px'; drag.ghost.style.top=e.clientY+'px';
+      autoScroll(e.clientY);
       clearOver();
       const tgt=targetAt(e.clientX,e.clientY); if(tgt) tgt.classList.add('over');
     }
@@ -1311,6 +1327,7 @@ function initDragDrop(){
   root.addEventListener('pointerup', e=>{
     if(!drag) return;
     const d=drag; drag=null;
+    cancelAnimationFrame(scrollRaf);
     if(d.ghost) d.ghost.remove();
     d.chip.classList.remove('dragging');
     clearOver();
@@ -1325,6 +1342,7 @@ function initDragDrop(){
     }
   });
   root.addEventListener('pointercancel', ()=>{
+    cancelAnimationFrame(scrollRaf);
     if(drag){ if(drag.ghost) drag.ghost.remove(); drag.chip.classList.remove('dragging'); drag=null; clearOver(); }
   });
 }
