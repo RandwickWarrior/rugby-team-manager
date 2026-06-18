@@ -874,14 +874,14 @@ function buildTeam(){
       </select>
     </div>
     <div style="display:flex;background:#f2f2f7;border-radius:10px;padding:3px;gap:2px;margin-bottom:10px">
-      ${[['positions','Drop-down'],['dragdrop','Drag &amp; drop'],['field','Field view']].map(([v,lbl])=>`
-        <button class="btn btn-sm view-toggle ${state.teamView===v?'active':''}" data-view="${v}" style="flex:1;border:none;border-radius:8px;padding:7px 6px;font-size:12px;background:${state.teamView===v?'#fff':'transparent'};color:${state.teamView===v?'#007aff':'#8e8e93'};font-weight:${state.teamView===v?'600':'400'};box-shadow:${state.teamView===v?'0 1px 4px rgba(0,0,0,0.12)':'none'}">${lbl}</button>`).join('')}
+      ${[['positions','Positions'],['dragdrop','List D&amp;D'],['fielddrop','Field D&amp;D'],['field','Field']].map(([v,lbl])=>`
+        <button class="btn btn-sm view-toggle ${state.teamView===v?'active':''}" data-view="${v}" style="flex:1;border:none;border-radius:8px;padding:7px 4px;font-size:11px;background:${state.teamView===v?'#fff':'transparent'};color:${state.teamView===v?'#007aff':'#8e8e93'};font-weight:${state.teamView===v?'600':'400'};box-shadow:${state.teamView===v?'0 1px 4px rgba(0,0,0,0.12)':'none'}">${lbl}</button>`).join('')}
     </div>
     <div style="display:flex;gap:6px;margin-bottom:12px">
       <button class="btn btn-sm btn-primary" id="auto-fill" style="flex:1">Auto-fill</button>
       <button class="btn btn-sm" id="clear-team" style="flex:1">Clear</button>
     </div>
-    ${state.teamView!=='dragdrop' ? `<div style="margin-bottom:12px">
+    ${state.teamView!=='dragdrop'&&state.teamView!=='fielddrop' ? `<div style="margin-bottom:12px">
       <div class="section-label">Available (${available.length}) — ${TEAMS[state.team].label}</div>
       ${available.length===0?'<div class="notice">No players available yet — enter poll responses first.</div>':
         `<div style="display:flex;flex-wrap:wrap;">${available.map(p=>{
@@ -890,7 +890,7 @@ function buildTeam(){
         }).join('')}</div>`}
     </div>` : ''}
 
-    ${state.teamView==='field' ? buildField() : state.teamView==='dragdrop' ? buildDragDrop() : `
+    ${state.teamView==='field' ? buildField() : state.teamView==='dragdrop' ? buildDragDrop() : state.teamView==='fielddrop' ? buildFieldDrop() : `
     <div class="notice">★ preferred &nbsp;◆ alternate &nbsp;Greyed = already assigned</div>
     <div class="section-label">Starters</div>
     ${starters.map(slotHtml).join('')}
@@ -1109,6 +1109,169 @@ function buildField() {
   `;
 }
 
+// ── Field Drag & Drop view ───────────────────────────────────────────────────
+function buildFieldDrop() {
+  const sq = squad();
+  const t = td();
+  const grade = td().grade;
+  const posSlots = positions();
+  const starterSlots = posSlots.filter(p => !p.label.startsWith('Sub'));
+  const subSlots     = posSlots.filter(p =>  p.label.startsWith('Sub'));
+
+  const posLayout_u11 = {
+    'Loosehead Prop':{x:22,y:14},'Hooker':{x:50,y:14},'Tight Head Prop':{x:78,y:14},
+    'Left Lock':{x:36,y:26},'Right Lock':{x:64,y:26},'Number Eight':{x:50,y:36},
+    'Scrum Half':{x:43,y:51},'Fly Half':{x:60,y:61},
+    'Left Centre':{x:27,y:74},'Right Centre':{x:73,y:74},
+    'Left Wing':{x:8,y:86},'Right Wing':{x:92,y:86},
+  };
+  const posLayout_u12 = {
+    'Loosehead Prop':{x:22,y:12},'Hooker':{x:50,y:12},'Tight Head Prop':{x:78,y:12},
+    'Left Lock':{x:36,y:23},'Right Lock':{x:64,y:23},
+    'Blindside Flanker':{x:26,y:32},'Openside Flanker':{x:74,y:32},'Number Eight':{x:50,y:32},
+    'Scrum Half':{x:43,y:45},'Fly Half':{x:60,y:55},
+    'Left Centre':{x:25,y:66},'Right Centre':{x:75,y:66},
+    'Left Wing':{x:8,y:77},'Right Wing':{x:92,y:77},'Fullback':{x:50,y:87},
+  };
+  const posLayout = grade==='u12' ? posLayout_u12 : posLayout_u11;
+  const fwdPos = ['Loosehead Prop','Hooker','Tight Head Prop','Left Lock','Right Lock',
+                  'Blindside Flanker','Openside Flanker','Number Eight'];
+  const isFwd = pos => fwdPos.includes(pos);
+
+  function abbr(p){
+    return p.replace('Loosehead Prop','LH Prop').replace('Tight Head Prop','TH Prop')
+            .replace('Blindside Flanker','BS Flkr').replace('Openside Flanker','OS Flkr')
+            .replace('Number Eight','No.8').replace('Left Centre','L Ctr')
+            .replace('Right Centre','R Ctr').replace('Left Wing','L Wing').replace('Right Wing','R Wing');
+  }
+  function shortName(name, max) {
+    if (!name) return '';
+    const parts = name.split(' ');
+    const last = parts.slice(1).join(' ') || parts[0];
+    return last.length <= max ? last : last[0]+'.';
+  }
+
+  const assignedNames = new Set(Object.values(t.teamSlots).filter(Boolean));
+  const available  = sq.filter(p=>t.pollResults[p.name]==='Yes, count me in'||t.pollResults[p.name]==='Help! I need a ride, please');
+  const availSet   = new Set(available.map(p=>p.name));
+  const others     = sq.filter(p=>!availSet.has(p.name)&&!p.friIneligible&&!p.hidden&&!p.guest);
+  const poolAvail  = available.filter(p=>!assignedNames.has(p.name));
+  const poolOthers = others.filter(p=>!assignedNames.has(p.name));
+
+  function tokenHtml(posLabel, slotNum) {
+    const name   = t.teamSlots[slotNum] || '';
+    const coords = posLayout[posLabel] || {x:50,y:50};
+    const fwd    = isFwd(posLabel);
+    const filled = !!name;
+    const bg     = filled ? (fwd?'#1a1a1a':'#ffffff') : 'transparent';
+    const fg     = filled ? (fwd?'#ffffff':'#1a1a1a') : 'rgba(255,255,255,0.5)';
+    const bc     = filled ? (fwd?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.18)') : 'rgba(255,255,255,0.55)';
+    const lbl    = filled ? shortName(name,9) : abbr(posLabel);
+    const fs     = filled ? (lbl.length<=5?'11':'9') : '8';
+    return `<div class="fd-token" data-slot="${slotNum}" data-pos="${posLabel}"
+        style="left:${coords.x}%;top:${coords.y}%;position:absolute;transform:translate(-50%,-50%);text-align:center;z-index:3;width:14%"
+        title="${posLabel}${name?' — '+name:''}">
+      <div class="fd-circle" style="background:${bg};border-color:${bc};border-style:${filled?'solid':'dashed'}">
+        <span style="color:${fg};font-size:${fs}px;font-weight:700;line-height:1.2;padding:0 4px;word-break:break-all;max-width:46px;display:block;text-align:center">${lbl}</span>
+      </div>
+      <div style="font-size:9px;line-height:1.25;text-shadow:0 1px 4px rgba(0,0,0,0.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;opacity:${filled?0.85:0}">${filled?name.split(' ')[0]:''}</div>
+    </div>`;
+  }
+
+  function subTokenHtml(s) {
+    const name   = t.teamSlots[s.num] || '';
+    const player = sq.find(p=>p.name===name);
+    const fwd    = player && player.prefXplorer.some(p=>fwdPos.includes(p));
+    const filled = !!name;
+    const bg     = filled ? (fwd?'#1a1a1a':'#ffffff') : 'transparent';
+    const fg     = filled ? (fwd?'#ffffff':'#1a1a1a') : 'rgba(255,255,255,0.4)';
+    const bc     = filled ? (fwd?'rgba(255,255,255,0.3)':'rgba(0,0,0,0.18)') : 'rgba(255,255,255,0.4)';
+    const lbl    = filled ? shortName(name,6) : s.num+'';
+    return `<div class="fd-token fd-sub-tok" data-slot="${s.num}" data-pos="${s.label}" title="${s.label}${name?' — '+name:''}">
+      <div class="fd-circle" style="width:40px;height:40px;background:${bg};border-color:${bc};border-style:${filled?'solid':'dashed'}">
+        <span style="color:${fg};font-size:${filled?'8':'10'}px;font-weight:700;line-height:1.2">${lbl}</span>
+      </div>
+      <div style="font-size:8px;color:#fff;opacity:${filled?0.75:0.4};text-align:center;line-height:1.2;margin-top:2px">${filled?name.split(' ')[0]:s.label.replace('Sub ','S')}</div>
+    </div>`;
+  }
+
+  function chipHtml(p, cls) {
+    const last = p.name.split(' ').slice(1).join(' ') || p.name;
+    return `<div class="fd-chip ${cls}" data-player="${esc(p.name)}">#${p.jersey??'—'}&nbsp;${last}</div>`;
+  }
+
+  const fieldH = grade==='u12' ? 115 : 105;
+
+  return `
+    <style>
+      .fd-token { cursor:pointer;-webkit-tap-highlight-color:transparent; }
+      .fd-circle { width:52px;height:52px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid;margin:0 auto 2px;box-shadow:0 3px 10px rgba(0,0,0,0.5);transition:transform 0.1s,box-shadow 0.1s; }
+      .fd-sub-tok { text-align:center;width:50px; }
+      .fd-token.fd-over .fd-circle { transform:scale(1.2);box-shadow:0 0 0 5px rgba(0,122,255,0.65),0 3px 10px rgba(0,0,0,0.5); }
+      .fd-pool { position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:600px;
+        background:rgba(20,20,22,0.97);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+        border-top:1px solid rgba(255,255,255,0.11);padding:8px 12px 14px;z-index:50;
+        box-shadow:0 -4px 24px rgba(0,0,0,0.4); }
+      .fd-pool-hdr { display:flex;justify-content:space-between;align-items:center;margin-bottom:6px; }
+      .fd-pool-lbl { font-size:10px;font-weight:600;color:rgba(255,255,255,0.38);text-transform:uppercase;letter-spacing:0.07em; }
+      .fd-pool-sub { font-size:10px;color:rgba(255,255,255,0.22); }
+      .fd-chips { display:flex;flex-wrap:wrap;gap:5px;max-height:92px;overflow-y:auto; }
+      .fd-chip { display:inline-flex;align-items:center;background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.82);
+        border:1.5px solid rgba(255,255,255,0.16);border-radius:16px;padding:6px 11px;font-size:12px;
+        font-weight:600;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;
+        -webkit-tap-highlight-color:transparent;transition:all 0.12s;white-space:nowrap; }
+      .fd-chip.avail { background:rgba(52,199,89,0.18);border-color:rgba(52,199,89,0.38);color:#adf5c0; }
+      .fd-chip.sel { background:#007aff !important;border-color:#007aff !important;color:#fff !important;box-shadow:0 0 0 3px rgba(0,122,255,0.4);transform:scale(1.05); }
+      .fd-chip.dragging { opacity:0.25; }
+      .fd-pool-hint { font-size:10px;color:rgba(255,255,255,0.25);text-align:center;margin-top:5px; }
+      #fd-wrap { padding-bottom:175px; }
+    </style>
+
+    <div class="section-label" style="margin-bottom:8px">${TEAMS[state.team].label} · ${AGE_GRADES[grade].label}${t.match.opponent?' · vs '+t.match.opponent:''}</div>
+
+    <div id="fd-wrap">
+      <div class="fp-wrap">
+        <div class="fp-field">
+          <svg class="fp-svg" viewBox="0 0 100 ${fieldH}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+            ${Array.from({length:8},(_,i)=>`<rect x="0" y="${i*fieldH/8}" width="100" height="${fieldH/16}" fill="${i%2===0?'rgba(0,0,0,0.04)':'rgba(255,255,255,0.04)'}" />`).join('')}
+            <rect x="2" y="3" width="96" height="${fieldH-6}" fill="none" stroke="white" stroke-width="0.5" opacity="0.6"/>
+            <line x1="2" y1="${fieldH*.5}" x2="98" y2="${fieldH*.5}" stroke="white" stroke-width="0.4" opacity="0.5"/>
+            <line x1="2" y1="${fieldH*.28}" x2="98" y2="${fieldH*.28}" stroke="white" stroke-width="0.3" opacity="0.35" stroke-dasharray="2,2"/>
+            <line x1="2" y1="${fieldH*.72}" x2="98" y2="${fieldH*.72}" stroke="white" stroke-width="0.3" opacity="0.35" stroke-dasharray="2,2"/>
+            <line x1="2" y1="${fieldH*.09}" x2="98" y2="${fieldH*.09}" stroke="white" stroke-width="0.4" opacity="0.5"/>
+            <line x1="2" y1="${fieldH*.91}" x2="98" y2="${fieldH*.91}" stroke="white" stroke-width="0.4" opacity="0.5"/>
+            <rect x="2" y="3" width="96" height="${fieldH*.06}" fill="rgba(255,255,255,0.05)"/>
+            <rect x="2" y="${fieldH*.94}" width="96" height="${fieldH*.06}" fill="rgba(255,255,255,0.05)"/>
+            <line x1="43" y1="3" x2="43" y2="${fieldH*.09}" stroke="#ffe066" stroke-width="0.7" opacity="0.8"/>
+            <line x1="57" y1="3" x2="57" y2="${fieldH*.09}" stroke="#ffe066" stroke-width="0.7" opacity="0.8"/>
+            <line x1="43" y1="5.5" x2="57" y2="5.5" stroke="#ffe066" stroke-width="0.5" opacity="0.8"/>
+            <text x="50" y="${fieldH*.5+2}" text-anchor="middle" font-size="3" fill="rgba(255,255,255,0.25)" font-family="sans-serif">HALFWAY</text>
+          </svg>
+          ${starterSlots.map(p=>tokenHtml(p.label,p.num)).join('')}
+        </div>
+        <div class="fp-subs-row">
+          <div class="fp-subs-label">Bench — tap to assign / tap filled to clear</div>
+          <div style="display:flex;justify-content:center;flex-wrap:wrap;gap:10px">
+            ${subSlots.map(subTokenHtml).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fd-pool" id="fd-pool">
+      <div class="fd-pool-hdr">
+        <span class="fd-pool-lbl">Pool · ${poolAvail.length+poolOthers.length} remaining</span>
+        <span class="fd-pool-sub">tap name → tap position &nbsp;·&nbsp; or drag</span>
+      </div>
+      <div class="fd-chips" id="fd-chips">
+        ${poolAvail.map(p=>chipHtml(p,'avail')).join('')}
+        ${poolOthers.map(p=>chipHtml(p,'')).join('')}
+        ${!poolAvail.length&&!poolOthers.length?'<span style="color:rgba(255,255,255,0.3);font-size:12px;padding:4px 2px">All players assigned ✓</span>':''}
+      </div>
+      <div class="fd-pool-hint">🟢 available &nbsp;⬜ no response &nbsp;· tap a filled position token to clear it</div>
+    </div>
+  `;
+}
 
 function calcStats(player) {
   // ── Training ─────────────────────────────────────────────────────────────
@@ -1435,6 +1598,106 @@ function initDragDrop(){
   });
 }
 
+function initFieldDrop() {
+  const wrap = document.getElementById('fd-wrap');
+  const pool = document.getElementById('fd-pool');
+  if (!wrap || !pool) return;
+
+  let selected = null;
+  let drag     = null;
+  let scrollRaf = null;
+  const SCROLL_ZONE = 100, SCROLL_MAX = 18;
+
+  function autoScroll(clientY) {
+    cancelAnimationFrame(scrollRaf);
+    const vh = window.innerHeight;
+    let speed = 0;
+    if (clientY > vh - SCROLL_ZONE) speed =  Math.round(SCROLL_MAX*(clientY-(vh-SCROLL_ZONE))/SCROLL_ZONE);
+    else if (clientY < SCROLL_ZONE)  speed = -Math.round(SCROLL_MAX*(SCROLL_ZONE-clientY)/SCROLL_ZONE);
+    if (!speed) return;
+    function step(){ window.scrollBy(0,speed); scrollRaf=requestAnimationFrame(step); }
+    scrollRaf = requestAnimationFrame(step);
+  }
+
+  function clearSel() {
+    selected = null;
+    document.querySelectorAll('.fd-chip.sel').forEach(c=>c.classList.remove('sel'));
+  }
+  function clearOver() {
+    document.querySelectorAll('.fd-token.fd-over').forEach(t=>t.classList.remove('fd-over'));
+  }
+  function tokenAt(x, y) {
+    const ghost = document.querySelector('.dd-ghost');
+    if (ghost) ghost.style.display = 'none';
+    const el = document.elementFromPoint(x, y);
+    if (ghost) ghost.style.display = '';
+    return el ? el.closest('.fd-token[data-slot]') : null;
+  }
+
+  // ── Drag & tap-select from pool bar ─────────────────────────────────────────
+  pool.addEventListener('pointerdown', e => {
+    const chip = e.target.closest('.fd-chip');
+    if (!chip) return;
+    e.preventDefault();
+    drag = { name:chip.dataset.player, moved:false, x0:e.clientX, y0:e.clientY, ghost:null, chip };
+    try { pool.setPointerCapture(e.pointerId); } catch(_) {}
+  });
+  pool.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx=e.clientX-drag.x0, dy=e.clientY-drag.y0;
+    if (!drag.moved && Math.hypot(dx,dy)>6) {
+      drag.moved = true;
+      drag.chip.classList.add('dragging');
+      drag.ghost = document.createElement('div');
+      drag.ghost.className = 'dd-ghost';
+      drag.ghost.textContent = drag.name;
+      document.body.appendChild(drag.ghost);
+    }
+    if (drag.moved) {
+      drag.ghost.style.left = e.clientX+'px';
+      drag.ghost.style.top  = e.clientY+'px';
+      autoScroll(e.clientY);
+      clearOver();
+      const tgt = tokenAt(e.clientX, e.clientY);
+      if (tgt) tgt.classList.add('fd-over');
+    }
+  });
+  pool.addEventListener('pointerup', e => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    cancelAnimationFrame(scrollRaf);
+    if (d.ghost) d.ghost.remove();
+    d.chip.classList.remove('dragging');
+    clearOver();
+    if (d.moved) {
+      const tgt = tokenAt(e.clientX, e.clientY);
+      if (tgt) { ddAssign(d.name, +tgt.dataset.slot); clearSel(); }
+    } else {
+      if (selected === d.name) { clearSel(); }
+      else { clearSel(); selected = d.name; d.chip.classList.add('sel'); }
+    }
+  });
+  pool.addEventListener('pointercancel', () => {
+    cancelAnimationFrame(scrollRaf);
+    if (drag) { if (drag.ghost) drag.ghost.remove(); drag.chip.classList.remove('dragging'); drag=null; }
+    clearOver();
+  });
+
+  // ── Tap position tokens to assign (if chip selected) or clear ───────────────
+  wrap.addEventListener('click', e => {
+    const token = e.target.closest('.fd-token[data-slot]');
+    if (!token) return;
+    const slotNum = +token.dataset.slot;
+    if (selected) {
+      ddAssign(selected, slotNum);
+      clearSel();
+    } else {
+      const cur = td().teamSlots[slotNum];
+      if (cur) ddUnassign(cur);
+    }
+  });
+}
+
 function attachEvents(){
   document.querySelectorAll('.section-btn').forEach(b=>b.addEventListener('click',()=>{
     state.section=b.dataset.section;
@@ -1550,6 +1813,7 @@ function attachEvents(){
       saveTeamSlots(); render();
     }));
     if(state.teamView==='dragdrop') initDragDrop();
+    if(state.teamView==='fielddrop') initFieldDrop();
     const af=document.getElementById('auto-fill');
     if(af) af.addEventListener('click',autoFill);
     const ct=document.getElementById('clear-team');
