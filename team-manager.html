@@ -1204,6 +1204,17 @@ function buildFieldDrop() {
 
   return `
     <style>
+      /* field pitch — same rules as buildField(), duplicated here so they apply without buildField() */
+      .fp-wrap { position:relative;width:100%;border-radius:14px;overflow:hidden;
+        background:linear-gradient(180deg,#1a5c28 0%,#2d7a3a 30%,#317f3e 50%,#2d7a3a 70%,#1a5c28 100%);
+        box-shadow:0 6px 24px rgba(0,0,0,0.35);margin-bottom:1rem; }
+      .fp-field { position:relative;width:100%;padding-bottom:${fieldH}%; }
+      .fp-svg { position:absolute;inset:0;width:100%;height:100%; }
+      .fp-subs-row { display:flex;justify-content:center;flex-wrap:wrap;gap:8px;padding:12px 8px 14px;
+        border-top:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.2); }
+      .fp-subs-label { width:100%;text-align:center;font-size:11px;font-weight:600;color:rgba(255,255,255,0.5);
+        letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px; }
+      /* field drag-drop specifics */
       .fd-token { cursor:pointer;-webkit-tap-highlight-color:transparent; }
       .fd-circle { width:52px;height:52px;display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid;margin:0 auto 2px;box-shadow:0 3px 10px rgba(0,0,0,0.5);transition:transform 0.1s,box-shadow 0.1s; }
       .fd-sub-tok { text-align:center;width:50px; }
