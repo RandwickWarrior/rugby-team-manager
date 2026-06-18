@@ -86,9 +86,53 @@
   .avail-chip.assigned { background: #f2f2f7; color: #aeaeb2; }
 </style>
 </head>
+<style>
+  .pin-screen{position:fixed;inset:0;background:#f2f2f7;z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:2rem;}
+  .pin-badge2{width:64px;height:64px;border-radius:50%;background:#007aff;display:flex;align-items:center;justify-content:center;font-size:28px;margin-bottom:1.25rem;box-shadow:0 6px 20px rgba(0,122,255,0.3);}
+  .pin-title2{font-size:22px;font-weight:700;margin-bottom:4px;color:#1c1c1e;}
+  .pin-sub2{font-size:13px;color:#8e8e93;margin-bottom:2rem;}
+  .pin-dots2{display:flex;gap:14px;margin-bottom:1.75rem;}
+  .pin-dot2{width:15px;height:15px;border-radius:50%;border:2px solid #c7c7cc;transition:all 0.15s;}
+  .pin-dot2.filled{background:#007aff;border-color:#007aff;}
+  .pin-dot2.error{background:#ff3b30;border-color:#ff3b30;}
+  .pin-pad2{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:260px;width:100%;}
+  .pin-btn2{aspect-ratio:1;border-radius:50%;border:1px solid #e5e5ea;background:#fff;color:#1c1c1e;font-family:inherit;font-size:22px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;-webkit-tap-highlight-color:transparent;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+  .pin-btn2:active{background:#e8f0ff;border-color:#007aff;transform:scale(0.95);}
+  .pin-btn2.del{font-size:18px;color:#8e8e93;}
+  .pin-err2{font-size:13px;color:#ff3b30;margin-top:0.75rem;min-height:20px;text-align:center;}
+</style>
 <body>
 <div class="toast" id="toast"></div>
-<div class="app">
+
+<!-- PIN screen -->
+<div id="tm-pin-screen" class="pin-screen">
+  <div class="pin-badge2">📋</div>
+  <div class="pin-title2">Team Manager</div>
+  <div class="pin-sub2">Coogee Seahorses · Manager access</div>
+  <div class="pin-dots2">
+    <div class="pin-dot2" id="pd0"></div>
+    <div class="pin-dot2" id="pd1"></div>
+    <div class="pin-dot2" id="pd2"></div>
+    <div class="pin-dot2" id="pd3"></div>
+  </div>
+  <div class="pin-pad2">
+    <button class="pin-btn2" data-pn="1">1</button>
+    <button class="pin-btn2" data-pn="2">2</button>
+    <button class="pin-btn2" data-pn="3">3</button>
+    <button class="pin-btn2" data-pn="4">4</button>
+    <button class="pin-btn2" data-pn="5">5</button>
+    <button class="pin-btn2" data-pn="6">6</button>
+    <button class="pin-btn2" data-pn="7">7</button>
+    <button class="pin-btn2" data-pn="8">8</button>
+    <button class="pin-btn2" data-pn="9">9</button>
+    <div></div>
+    <button class="pin-btn2" data-pn="0">0</button>
+    <button class="pin-btn2 del" id="tm-pin-del">⌫</button>
+  </div>
+  <div class="pin-err2" id="tm-pin-err"></div>
+</div>
+
+<div class="app" id="tm-app" style="display:none">
   <a href="index.html" class="menu-btn">‹ Main menu</a>
   <div class="header">
     <h1>🏉 Rugby Team Manager</h1>
@@ -98,6 +142,45 @@
   <a href="index.html" class="menu-btn menu-btn-bottom">‹ Back to main menu</a>
 </div>
 
+<script>
+// PIN gate
+(function() {
+  const PIN = '0000';
+  const SESSION_KEY = 'tm_pin_ok';
+  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+    document.getElementById('tm-pin-screen').style.display = 'none';
+    document.getElementById('tm-app').style.display = '';
+    return;
+  }
+  let entry = '';
+  const dots = [0,1,2,3].map(i => document.getElementById('pd'+i));
+  function updateDots() {
+    dots.forEach((d,i) => { d.classList.toggle('filled', i < entry.length); d.classList.remove('error'); });
+    document.getElementById('tm-pin-err').textContent = '';
+  }
+  function tryPin() {
+    if (entry === PIN) {
+      sessionStorage.setItem(SESSION_KEY, '1');
+      document.getElementById('tm-pin-screen').style.display = 'none';
+      document.getElementById('tm-app').style.display = '';
+    } else {
+      dots.forEach(d => d.classList.add('error'));
+      document.getElementById('tm-pin-err').textContent = 'Incorrect PIN';
+      entry = '';
+      setTimeout(updateDots, 700);
+    }
+  }
+  document.querySelectorAll('.pin-btn2[data-pn]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (entry.length < 4) { entry += btn.dataset.pn; updateDots(); }
+      if (entry.length === 4) setTimeout(tryPin, 80);
+    });
+  });
+  document.getElementById('tm-pin-del').addEventListener('click', () => {
+    entry = entry.slice(0,-1); updateDots();
+  });
+})();
+</script>
 <script>
 const AGE_GRADES = {
   u10: {
@@ -1108,34 +1191,30 @@ function buildStats() {
       <td style="font-weight:600;white-space:nowrap">${p.jersey??'—'} ${p.name.split(' ').map((w,i)=>i===0?w[0]+'.':w).join(' ')}</td>
       <td>${s.attended}/${s.totalSessions||'—'}</td>
       <td style="color:${trPctColor};font-weight:600">${trPct}</td>
-      <td>${s.friStarted}</td>
-      <td>${s.friSub}</td>
+      <td>${s.friPlayed}</td>
       <td>${s.friNS||0}</td>
-      <td>${s.sunStarted}</td>
-      <td>${s.sunSub}</td>
+      <td>${s.sunPlayed}</td>
       <td>${s.sunNS||0}</td>
     </tr>`;
   }).join('');
 
   // Graphic view — WhatsApp-friendly monospace block
-  const header = `🏉 COOGEE SEAHORSES — PLAYER STATS\n${'─'.repeat(52)}\n` +
-    `${'Player'.padEnd(16)}${'Tr%'.padStart(4)} ${'Fri'.padStart(3)} ${'Sub'.padStart(3)} ${'NS'.padStart(3)} ${'Sun'.padStart(3)} ${'Sub'.padStart(3)} ${'NS'.padStart(3)}\n` +
-    `${'─'.repeat(52)}`;
+  const header = `🏉 COOGEE SEAHORSES — PLAYER STATS\n${'─'.repeat(46)}\n` +
+    `${'Player'.padEnd(16)}${'Tr%'.padStart(4)} ${'Fri'.padStart(4)} ${'NS'.padStart(3)} ${'Sun'.padStart(4)} ${'NS'.padStart(3)}\n` +
+    `${'─'.repeat(46)}`;
 
   const graphicRows = rows.map(({p, s}) => {
     const name = (p.name.split(' ').map((w,i)=>i===0?w[0]+'.':w).join(' ')).padEnd(16).slice(0,16);
     const pct  = (s.last4Pct !== null ? s.last4Pct+'%' : '—').padStart(4);
-    const fs   = String(s.friStarted).padStart(3);
-    const fb   = String(s.friSub).padStart(3);
+    const fp   = String(s.friPlayed).padStart(4);
     const fn_  = String(s.friNS||0).padStart(3);
-    const ss   = String(s.sunStarted).padStart(3);
-    const sb   = String(s.sunSub).padStart(3);
+    const sp   = String(s.sunPlayed).padStart(4);
     const sn_  = String(s.sunNS||0).padStart(3);
-    return `${name}${pct} ${fs} ${fb} ${fn_} ${ss} ${sb} ${sn_}`;
+    return `${name}${pct} ${fp} ${fn_} ${sp} ${sn_}`;
   }).join('\n');
 
-  const graphicText = header + '\n' + graphicRows + '\n' + '─'.repeat(52) +
-    '\nFri/Sun: Str=Started  Sub=Sub  NS=Not selected\nTr%=Training attendance last 4 weeks';
+  const graphicText = header + '\n' + graphicRows + '\n' + '─'.repeat(46) +
+    '\nFri/Sun: Played=started+sub  NS=available not selected\nTr%=Training attendance last 4 weeks';
 
   return `
     <style>
@@ -1174,12 +1253,12 @@ function buildStats() {
             <th rowspan="2" style="text-align:left">Player</th>
             <th rowspan="2">Tr</th>
             <th rowspan="2">Tr%<br><span style="font-weight:400;opacity:0.7">4wk</span></th>
-            <th colspan="3" style="border-bottom:1px solid #e5e5ea">Friday</th>
-            <th colspan="3" style="border-bottom:1px solid #e5e5ea">Sunday</th>
+            <th colspan="2" style="border-bottom:1px solid #e5e5ea">Friday</th>
+            <th colspan="2" style="border-bottom:1px solid #e5e5ea">Sunday</th>
           </tr>
           <tr>
-            <th>Str</th><th>Sub</th><th>NS</th>
-            <th>Str</th><th>Sub</th><th>NS</th>
+            <th>Played</th><th>NS</th>
+            <th>Played</th><th>NS</th>
           </tr>
         </thead>
         <tbody>${tableRows}</tbody>
