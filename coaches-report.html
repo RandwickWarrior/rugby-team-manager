@@ -1001,9 +1001,89 @@ function buildGridTab() {
 
   return `<div class="section-label">Availability, selection &amp; positions grid</div>
     ${legend}
-    ${toggle}
+    <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap">
+      ${toggle ? toggle.replace('style="margin-bottom:1rem"','') : ''}
+      <button class="filter-btn" id="grid-export">⬇ Export CSV</button>
+    </div>
     ${teamTable('Coogee 11 — Friday', 'Coogee 11', FRI_FIX)}
     ${teamTable('Coogee Barbarians 11 — Sunday', 'Coogee Barbarians 11', SUN_FIX)}`;
+}
+
+function exportGridCsv() {
+  const FRI_FIX = [
+    {r:1,res:'L 41–12'},{r:2,res:'W 36–12'},{r:3,res:'L 36–12'},
+    {r:4,res:'W 31–19'},{r:5,res:'L 36–12'},{r:6,res:'Washout'},{r:7,res:'W 54–0'}
+  ];
+  const SUN_FIX = [
+    {r:1,res:'W 26–5'},{r:2,res:'L 14–29'},{r:3,res:'D 26–26'},
+    {r:4,res:'W 36–7'},{r:5,res:'W 43–5'},{r:6,res:'Washout'},{r:7,res:'W 28–24'}
+  ];
+
+  function cellText(p, f, teamName) {
+    const resp   = liveResponses[`${f.r}|${teamName}`];
+    const status = deriveStatus(p.name, effectiveSlots(f.r, teamName), resp);
+    const wo     = f.res === 'Washout';
+    const slot   = playerSlot(p.name, f.r, teamName);
+    if (status === 'Started' || status === 'Sub') {
+      if (wo) return 'AW';
+      if (slot && slot <= 12) return U11_POS_ABBR[slot - 1];
+      if (slot && slot > 12)  return 'Sub';
+      return 'Played';
+    }
+    if (status === 'Not Selected') return 'Avail';
+    if (status === 'Unavailable')  return 'Out';
+    return '';
+  }
+
+  function teamCsv(label, teamName, fixtures) {
+    const rows = [];
+    // header row
+    rows.push([label, ...fixtures.map(f => `R${f.r}${f.res==='Washout'?'*':''}`), 'Played', 'AW', 'Avail', 'Out']);
+    // result row
+    rows.push(['Result', ...fixtures.map(f => f.res), '', '', '', '']);
+
+    SQUAD.forEach(p => {
+      const cells = fixtures.map(f => cellText(p, f, teamName));
+      if (cells.every(c => c === '')) return; // skip players with no data
+      let played = 0, aw = 0, avail = 0, out = 0;
+      fixtures.forEach((f, i) => {
+        const v = cells[i];
+        if (v === 'AW')    aw++;
+        else if (v === 'Out')   out++;
+        else if (v === 'Avail') avail++;
+        else if (v)             played++;
+      });
+      rows.push([p.name, ...cells, played, aw, avail, out]);
+    });
+
+    // totals
+    const totPlayed = ['Played total', ...fixtures.map(f => {
+      let n = 0;
+      SQUAD.forEach(p => { const v = cellText(p, f, teamName); if (v && v !== 'AW' && v !== 'Avail' && v !== 'Out') n++; });
+      return n;
+    }), '', '', '', ''];
+    rows.push(totPlayed);
+    rows.push([]); // blank separator
+    return rows;
+  }
+
+  const allRows = [
+    ...teamCsv('Coogee 11 — Friday', 'Coogee 11', FRI_FIX),
+    ...teamCsv('Coogee Barbarians 11 — Sunday', 'Coogee Barbarians 11', SUN_FIX),
+    ['Key: position abbr = started; Sub = bench; AW = selected but washout; Avail = available not selected; Out = unavailable']
+  ];
+
+  const csv = allRows.map(r => r.map(v => {
+    const s = String(v ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g,'""')}"` : s;
+  }).join(',')).join('\r\n');
+
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = 'seahorses-grid.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV downloaded ✓');
 }
 
 function attachTabEvents() {
@@ -1015,6 +1095,8 @@ function attachTabEvents() {
   });
   const gt = document.getElementById('grid-toggle');
   if (gt) gt.addEventListener('click', () => { gridShowAll = !gridShowAll; renderTab('grid'); });
+  const ge = document.getElementById('grid-export');
+  if (ge) ge.addEventListener('click', exportGridCsv);
 }
 </script>
 </body>
