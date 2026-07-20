@@ -302,35 +302,11 @@
   <a href="index.html" class="menu-btn menu-btn-bottom">‹ Back to main menu</a>
 
 </div>
+<script src="fixtures.js"></script>
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
 
-const FIXTURES = {
-  seahorses: [
-    { round:1, date:'Fri 24 Apr', isoDate:'2026-04-24', opponent:'Burraneer Gold',        venue:'John Dwyer Park',           time:'7:10pm',  result:'L 41–12' },
-    { round:2, date:'Fri 1 May',  isoDate:'2026-05-01', opponent:'Clovelly Eagles Blue',  venue:'Nagle Park Field 2',        time:'5:30pm',  result:'W 36–12' },
-    { round:3, date:'Fri 8 May',  isoDate:'2026-05-08', opponent:'Rockdale',              venue:'C.A Redmond Oval',          time:'7:20pm',  result:'L 36–12' },
-    { round:4, date:'Fri 15 May', isoDate:'2026-05-15', opponent:'Burraneer Blue',        venue:'Nagle Park Field 1',        time:'7:20pm',  result:'W 31–19' },
-    { round:5, date:'Fri 22 May', isoDate:'2026-05-22', opponent:'Maroubra Missiles',     venue:'Nagle Park Field 2',        time:'5:30pm',  result:'L 36–12' },
-    { round:6, date:'Fri 29 May', isoDate:'2026-05-29', opponent:'Oatley',                venue:'Nagle Park Field 2',        time:'5:30pm',  result:'Washout' },
-    { round:7, date:'Fri 12 Jun', isoDate:'2026-06-12', opponent:'Clovelly Eagles White', venue:'Nagle Park Field 1',        time:'8:00pm',  result:'W 54–0' },
-    { round:8, date:'Fri 19 Jun', isoDate:'2026-06-19', opponent:'Burraneer Gold',        venue:'Nagle Park Field 1',        time:'8:00pm',  result:'L 21–35' },
-    { round:9, date:'Fri 24 Jul', isoDate:'2026-07-24', opponent:'Clovelly Eagles Blue',  venue:'Nagle Park Field 2',        time:'5:20pm',  result:'' },
-    { round:10,date:'Fri 31 Jul', isoDate:'2026-07-31', opponent:'Rockdale',              venue:'Nagle Park Field 1',        time:'6:20pm',  result:'' },
-  ],
-  barbarians: [
-    { round:1, date:'Sun 26 Apr', isoDate:'2026-04-26', opponent:'Hunters Hill Black',    venue:'Boronia Park Field 1',      time:'9:30am',  result:'W 26–5' },
-    { round:2, date:'Sun 3 May',  isoDate:'2026-05-03', opponent:'Norths Pirates',        venue:'Nagle Park Field 1',        time:'11:00am', result:'L 14–29' },
-    { round:3, date:'Sun 10 May', isoDate:'2026-05-10', opponent:'Wakehurst',             venue:'Wakehurst Rugby Park',      time:'9:50am',  result:'D 26–26' },
-    { round:4, date:'Sun 17 May', isoDate:'2026-05-17', opponent:'Wahroonga Gold',        venue:'Nagle Park Field 1',        time:'9:10am',  result:'W 36–7' },
-    { round:5, date:'Sun 24 May', isoDate:'2026-05-24', opponent:'Mosman Dolphins',       venue:'Nagle Park Field 2',        time:'9:00am',  result:'W 43–5' },
-    { round:6, date:'Sun 31 May', isoDate:'2026-05-31', opponent:'Hornsby Lions',         venue:'Mark Taylor Oval, Waitara', time:'9:30am',  result:'Washout' },
-    { round:7, date:'Sun 14 Jun', isoDate:'2026-06-14', opponent:'Allambie Green',        venue:'Nagle Park Field 2',        time:'10:00am', result:'' },
-    { round:8, date:'Sun 21 Jun', isoDate:'2026-06-21', opponent:'Hunters Hill Black',    venue:'Nagle Park Field 2',        time:'10:00am', result:'' },
-    { round:9, date:'Sun 26 Jul', isoDate:'2026-07-26', opponent:'Norths Pirates',        venue:'Tunks Park 3',              time:'10:20am', result:'' },
-    { round:10,date:'Sun 2 Aug',  isoDate:'2026-08-02', opponent:'Wakehurst',             venue:'Nagle Park Field 2',        time:'10:00am', result:'' },
-  ]
-};
+const FIXTURES = SEASON_FIXTURES; // data lives in fixtures.js
 
 // All players alphabetical
 const PLAYERS = [

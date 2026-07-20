@@ -174,12 +174,9 @@
   <h1>Coogee <span>Seahorses</span></h1>
   <p class="subtitle">Coogee Seahorses JRUFC · Under 11 · 2026</p>
 
-  <div class="next-game">
+  <div class="next-game" id="next-game-fri">
     <span>📅</span>
-    <div>
-      <strong>Coogee 11 — Round 9 · Fri 24 Jul</strong><br>
-      vs Clovelly Eagles Blue · Nagle Park Field 2 · 5:20pm
-    </div>
+    <div id="next-game-fri-text">Loading next game…</div>
   </div>
   <div class="next-game" style="margin-top:-6px;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.15)">
     <span>🏆</span>
@@ -253,7 +250,20 @@
 
 </div>
 
+<script src="fixtures.js"></script>
 <script>
+  // Populate next-game banner from SEASON_FIXTURES
+  (function() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const next = SEASON_FIXTURES.seahorses.find(f => new Date(f.isoDate) >= today);
+    if (next) {
+      document.getElementById('next-game-fri-text').innerHTML =
+        `<strong>Coogee 11 — Round ${next.round} · ${next.date}</strong><br>vs ${next.opponent} · ${next.venue} · ${next.time}`;
+    } else {
+      document.getElementById('next-game-fri').style.display = 'none';
+    }
+  })();
+
   // Show the most recent result for each team from the live results store
   (async () => {
     const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';

@@ -240,23 +240,13 @@
   <a href="availability-sun.html" class="nav-btn nav-cross" style="margin-top:1.5rem">☀️ Go to Sunday Availability form ›</a>
 
 </div>
+<script src="fixtures.js"></script>
 <script>
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
   const TEAM = 'Coogee 11';
   const STORAGE_KEY = 'seahorses_fri_responses';
 
-  const FIXTURES = [
-    { round:1, isoDate:'2026-04-24', opponent:'Burraneer Gold',        date:'Fri 24 Apr', venue:'John Dwyer Park',       time:'7:10pm' },
-    { round:2, isoDate:'2026-05-01', opponent:'Clovelly Eagles Blue',  date:'Fri 1 May',  venue:'Nagle Park Field 2',    time:'5:30pm' },
-    { round:3, isoDate:'2026-05-08', opponent:'Rockdale',              date:'Fri 8 May',  venue:'C.A Redmond Oval',      time:'7:20pm' },
-    { round:4, isoDate:'2026-05-15', opponent:'Burraneer Blue',        date:'Fri 15 May', venue:'Nagle Park Field 1',    time:'7:20pm' },
-    { round:5, isoDate:'2026-05-22', opponent:'Maroubra Missiles',     date:'Fri 22 May', venue:'Nagle Park Field 2',    time:'5:30pm' },
-    { round:6, isoDate:'2026-05-29', opponent:'Oatley',                date:'Fri 29 May', venue:'Nagle Park Field 2',    time:'5:30pm' },
-    { round:7, isoDate:'2026-06-12', opponent:'Clovelly Eagles White', date:'Fri 12 Jun', venue:'Nagle Park Field 1',    time:'8:00pm' },
-    { round:8, isoDate:'2026-06-19', opponent:'Burraneer Gold',        date:'Fri 19 Jun', venue:'Nagle Park Field 1',    time:'8:00pm' },
-    { round:9, isoDate:'2026-07-24', opponent:'Clovelly Eagles Blue',  date:'Fri 24 Jul', venue:'Nagle Park Field 2',    time:'5:20pm' },
-    { round:10,isoDate:'2026-07-31', opponent:'Rockdale',              date:'Fri 31 Jul', venue:'Nagle Park Field 1',    time:'6:20pm' },
-  ];
+  const FIXTURES = SEASON_FIXTURES.seahorses; // data lives in fixtures.js
 
   function getNextFixture() {
     const today = new Date(); today.setHours(0,0,0,0);

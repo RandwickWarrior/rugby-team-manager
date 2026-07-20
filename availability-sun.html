@@ -237,23 +237,13 @@
   <a href="availability-fri.html" class="nav-btn nav-cross" style="margin-top:1.5rem">🌙 Go to Friday Availability form ›</a>
 
 </div>
+<script src="fixtures.js"></script>
 <script>
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
   const TEAM = 'Coogee Barbarians 11';
   const STORAGE_KEY = 'seahorses_sun_responses';
 
-  const FIXTURES = [
-    { round:1, isoDate:'2026-04-26', opponent:'Hunters Hill Black',  date:'Sun 26 Apr', venue:'Boronia Park Field 1',      time:'9:30am' },
-    { round:2, isoDate:'2026-05-03', opponent:'Norths Pirates',      date:'Sun 3 May',  venue:'Nagle Park Field 1',        time:'11:00am' },
-    { round:3, isoDate:'2026-05-10', opponent:'Wakehurst',           date:'Sun 10 May', venue:'Wakehurst Rugby Park',      time:'9:50am' },
-    { round:4, isoDate:'2026-05-17', opponent:'Wahroonga Gold',      date:'Sun 17 May', venue:'Nagle Park Field 1',        time:'9:10am' },
-    { round:5, isoDate:'2026-05-24', opponent:'Mosman Dolphins',     date:'Sun 24 May', venue:'Nagle Park Field 2',        time:'9:00am' },
-    { round:6, isoDate:'2026-05-31', opponent:'Hornsby Lions',       date:'Sun 31 May', venue:'Mark Taylor Oval, Waitara', time:'9:30am' },
-    { round:7, isoDate:'2026-06-14', opponent:'Allambie Green',      date:'Sun 14 Jun', venue:'Nagle Park Field 2',        time:'10:00am' },
-    { round:8, isoDate:'2026-06-21', opponent:'Hunters Hill Black',  date:'Sun 21 Jun', venue:'Nagle Park Field 2',        time:'10:00am' },
-    { round:9, isoDate:'2026-07-26', opponent:'Norths Pirates',      date:'Sun 26 Jul', venue:'Tunks Park 3',              time:'10:20am' },
-    { round:10,isoDate:'2026-08-02', opponent:'Wakehurst',           date:'Sun 2 Aug',  venue:'Nagle Park Field 2',        time:'10:00am' },
-  ];
+  const FIXTURES = SEASON_FIXTURES.barbarians; // data lives in fixtures.js
 
   function getNextFixture() {
     const today = new Date(); today.setHours(0,0,0,0);
