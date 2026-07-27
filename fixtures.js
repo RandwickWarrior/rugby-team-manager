@@ -21,7 +21,7 @@ const SEASON_FIXTURES = {
     { round:4,  isoDate:'2026-05-17', opponent:'Wahroonga Gold',        date:'Sun 17 May',  venue:'Nagle Park Field 1',        time:'9:10am',  result:'W 36–7'  },
     { round:5,  isoDate:'2026-05-24', opponent:'Mosman Dolphins',       date:'Sun 24 May',  venue:'Nagle Park Field 2',        time:'9:00am',  result:'W 43–5'  },
     { round:6,  isoDate:'2026-05-31', opponent:'Hornsby Lions',         date:'Sun 31 May',  venue:'Mark Taylor Oval, Waitara', time:'9:30am',  result:'Washout' },
-    { round:7,  isoDate:'2026-06-14', opponent:'Allambie Green',        date:'Sun 14 Jun',  venue:'Nagle Park Field 2',        time:'10:00am', result:'' },
+    { round:7,  isoDate:'2026-06-14', opponent:'Allambie Green',        date:'Sun 14 Jun',  venue:'Nagle Park Field 2',        time:'10:00am', result:'W 28–24' },
     { round:8,  isoDate:'2026-06-21', opponent:'Hunters Hill Black',    date:'Sun 21 Jun',  venue:'Nagle Park Field 2',        time:'10:00am', result:'' },
     { round:9,  isoDate:'2026-07-26', opponent:'Norths Pirates',        date:'Sun 26 Jul',  venue:'Tunks Park 3',              time:'10:20am', result:'' },
     { round:10, isoDate:'2026-08-02', opponent:'Wakehurst',             date:'Sun 2 Aug',   venue:'Nagle Park Field 2',        time:'10:00am', result:'' },

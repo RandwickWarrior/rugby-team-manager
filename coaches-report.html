@@ -217,6 +217,7 @@
   <a href="index.html" class="menu-btn menu-btn-bottom">‹ Back to main menu</a>
 </div>
 
+<script src="fixtures.js"></script>
 <script>
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
 const PIN = '0000';
@@ -943,15 +944,14 @@ function buildSeasonTab() {
 
 // ── Grid tab — played / available / not available / washout, by round ─────────
 function buildGridTab() {
-  // Rounds that have occurred (played or washout) per team
-  const FRI_FIX = [
-    {r:1,res:'L 41–12'},{r:2,res:'W 36–12'},{r:3,res:'L 36–12'},
-    {r:4,res:'W 31–19'},{r:5,res:'L 36–12'},{r:6,res:'Washout'},{r:7,res:'W 54–0'}
-  ];
-  const SUN_FIX = [
-    {r:1,res:'W 26–5'},{r:2,res:'L 14–29'},{r:3,res:'D 26–26'},
-    {r:4,res:'W 36–7'},{r:5,res:'W 43–5'},{r:6,res:'Washout'},{r:7,res:'W 28–24'}
-  ];
+  // Rounds that have occurred — derived from fixtures.js (past date or result recorded)
+  const _today = new Date(); _today.setHours(0,0,0,0);
+  const FRI_FIX = SEASON_FIXTURES.seahorses
+    .filter(f => new Date(f.isoDate) < _today || f.result)
+    .map(f => ({r: f.round, res: f.result || ''}));
+  const SUN_FIX = SEASON_FIXTURES.barbarians
+    .filter(f => new Date(f.isoDate) < _today || f.result)
+    .map(f => ({r: f.round, res: f.result || ''}));
 
   // Coloured cell; played shows position, washout-selected shows AW
   function statusCell(status, washout, slot) {
