@@ -445,12 +445,13 @@ async function loadAllData() {
     const teams = ['Coogee 11','Coogee Barbarians 11'];
 
     // Fire everything in parallel
+    const TOTAL_ROUNDS = SEASON_FIXTURES.seahorses.length;
     const [tr, ms, rs, ...roundResults] = await Promise.all([
       apiGet({ action:'getTraining' }),
       apiGet({ action:'getMatchStats' }),
       apiGet({ action:'results' }),
       ...teams.flatMap(team =>
-        Array.from({length:8}, (_,i) => i+1).flatMap(r => [
+        Array.from({length:TOTAL_ROUNDS}, (_,i) => i+1).flatMap(r => [
           apiGet({ action:'responses', round:r, team }),
           apiGet({ action:'team',      round:r, team, type:'selected' }),
           apiGet({ action:'team',      round:r, team, type:'played'   }),
@@ -462,10 +463,10 @@ async function loadAllData() {
     if (ms && ms.success) matchStats   = ms.records  || [];
     if (rs && rs.success) liveResults  = rs.results  || {};
 
-    // Unpack round results (48 responses, 3 per round per team)
+    // Unpack round results (3 per round per team)
     let idx = 0;
     for (const team of teams) {
-      for (let r = 1; r <= 8; r++) {
+      for (let r = 1; r <= TOTAL_ROUNDS; r++) {
         const data = roundResults[idx++];
         const td   = roundResults[idx++];
         const pd   = roundResults[idx++];
