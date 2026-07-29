@@ -364,7 +364,7 @@ function squadForTeam(grade, team) {
 }
 
 // ── Backend URL — paste your Apps Script deployment URL here ─────────────────
-// Same URL as in availability-form.html
+// Same URL as in the availability pages (availability-fri.html / availability-sun.html)
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
 
 // ── Backend helpers ───────────────────────────────────────────────────────────
@@ -469,8 +469,8 @@ const TEAMS = {
   barbarians: { label:'Coogee Barbarians 11', detail:'Sunday mornings', histKey:'sun' }
 };
 
-// Pre-populated fixtures keyed by team then round number
-// ── FIXTURES — single source of truth, kept in sync with availability-form.html
+// Fixtures keyed by team then round number.
+// ── FIXTURES — data lives in fixtures.js (the single source of truth); loaded above.
 // isoDate drives auto-detection of next upcoming round in both apps
 const FIXTURES = SEASON_FIXTURES; // data lives in fixtures.js
 

@@ -11,8 +11,11 @@ const SEASON_FIXTURES = {
     { round:6,  isoDate:'2026-05-29', opponent:'Oatley',                date:'Fri 29 May',  venue:'Nagle Park Field 2',        time:'5:30pm',  result:'Washout' },
     { round:7,  isoDate:'2026-06-12', opponent:'Clovelly Eagles White', date:'Fri 12 Jun',  venue:'Nagle Park Field 1',        time:'8:00pm',  result:'W 54–0'  },
     { round:8,  isoDate:'2026-06-19', opponent:'Burraneer Gold',        date:'Fri 19 Jun',  venue:'Nagle Park Field 1',        time:'8:00pm',  result:'L 21–35' },
-    { round:9,  isoDate:'2026-07-24', opponent:'Clovelly Eagles Blue',  date:'Fri 24 Jul',  venue:'Nagle Park Field 2',        time:'5:20pm',  result:'' },
+    { round:9,  isoDate:'2026-07-24', opponent:'Clovelly Eagles Blue',  date:'Fri 24 Jul',  venue:'Nagle Park Field 2',        time:'5:20pm',  result:'W 59–19' },
     { round:10, isoDate:'2026-07-31', opponent:'Rockdale',              date:'Fri 31 Jul',  venue:'Nagle Park Field 1',        time:'6:20pm',  result:'' },
+    { round:11, isoDate:'2026-08-07', opponent:'Burraneer Blue',        date:'Fri 7 Aug',   venue:'John Dwyer Park',           time:'7:20pm',  result:'' },
+    { round:12, isoDate:'2026-08-14', opponent:'Maroubra Missiles',     date:'Fri 14 Aug',  venue:'Nagle Park Field 2',        time:'7:10pm',  result:'' },
+    { round:13, isoDate:'2026-08-21', opponent:'Oatley',                date:'Fri 21 Aug',  venue:'HV Evatt Park',             time:'7:20pm',  result:'' },
   ],
   barbarians: [
     { round:1,  isoDate:'2026-04-26', opponent:'Hunters Hill Black',    date:'Sun 26 Apr',  venue:'Boronia Park Field 1',      time:'9:30am',  result:'W 26–5'  },
@@ -25,5 +28,8 @@ const SEASON_FIXTURES = {
     { round:8,  isoDate:'2026-06-21', opponent:'Hunters Hill Black',    date:'Sun 21 Jun',  venue:'Nagle Park Field 2',        time:'10:00am', result:'W 28–0'  },
     { round:9,  isoDate:'2026-07-26', opponent:'Norths Pirates',        date:'Sun 26 Jul',  venue:'Tunks Park 3',              time:'10:20am', result:'' },
     { round:10, isoDate:'2026-08-02', opponent:'Wakehurst',             date:'Sun 2 Aug',   venue:'Nagle Park Field 2',        time:'10:00am', result:'' },
+    { round:11, isoDate:'2026-08-09', opponent:'Wahroonga Gold',        date:'Sun 9 Aug',   venue:'Cliff Oval Field 1',        time:'9:30am',  result:'' },
+    { round:12, isoDate:'2026-08-16', opponent:'Mosman Dolphins',       date:'Sun 16 Aug',  venue:'Rawson Oval',               time:'10:20am', result:'' },
+    { round:13, isoDate:'2026-08-23', opponent:'Hornsby Lions',         date:'Sun 23 Aug',  venue:'Nagle Park Field 2',        time:'9:30am',  result:'' },
   ]
 };
