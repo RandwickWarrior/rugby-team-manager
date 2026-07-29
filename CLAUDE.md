@@ -18,9 +18,8 @@ longer the final round.
   - R9 (Fri 24 Jul v Clovelly Eagles Blue) recorded as **W 59–19**.
   - Remaining: R10 Fri 31 Jul v Rockdale, R11 Fri 7 Aug v Burraneer Blue,
     R12 Fri 14 Aug v Maroubra Missiles, R13 Fri 21 Aug v Oatley.
-- **Barbarians (Sun):** R1–R8 recorded (5W–1L–1D, R6 washout). R9–R13 to play.
-  - ⚠️ **R9 (Sun 26 Jul v Norths Pirates) has been played but its `result`
-    is still blank** — enter it in `fixtures.js`.
+- **Barbarians (Sun):** R1–R9 recorded (5W–1L–2D, R6 washout). R10–R13 to play.
+  - R9 (Sun 26 Jul v Norths Pirates) recorded as **D 12–12**.
   - Remaining: R10 Sun 2 Aug v Wakehurst, R11 Sun 9 Aug v Wahroonga Gold,
     R12 Sun 16 Aug v Mosman Dolphins, R13 Sun 23 Aug v Hornsby Lions.
 
@@ -29,8 +28,8 @@ longer the final round.
 `fixtures.js` too (continue the round numbering, or label them as finals).
 
 **Immediate next steps:**
-1. Enter the missing Barbarians R9 result (Sun 26 Jul v Norths Pirates) in
-   `fixtures.js`. (Seahorses R9 done — W 59–19.)
+1. All rounds through R9 are now recorded (Seahorses R9 W 59–19, Barbarians R9
+   D 12–12). Next results due are R10 onward for both teams.
 2. After each match, add the result the same way.
 3. Sanity-check the coaches report / availability % once played rounds have
    results (this is where the "only 8 rounds" and ">100%" bugs tend to appear).
