@@ -822,19 +822,11 @@ function buildTrainingTab() {
 
 // ── Season tab ────────────────────────────────────────────────────────────────
 function buildSeasonTab() {
-  const friFixtures = [
-    {r:1,opp:'Burraneer Gold',result:'L 41–12'},{r:2,opp:'Clovelly Eagles Blue',result:'W 36–12'},
-    {r:3,opp:'Rockdale',result:'L 36–12'},{r:4,opp:'Burraneer Blue',result:'W 31–19'},
-    {r:5,opp:'Maroubra Missiles',result:'L 36–12'},{r:6,opp:'Oatley',result:'Washout'},
-    {r:7,opp:'Clovelly Eagles White',result:'W 54–0'},{r:8,opp:'Burraneer Gold',result:''}
-  ];
-  const sunFixtures = [
-    {r:1,opp:'Hunters Hill Black',result:'W 26–5'},{r:2,opp:'Norths Pirates',result:'L 14–29'},
-    {r:3,opp:'Wakehurst',result:'D 26–26'},{r:4,opp:'Wahroonga Gold',result:'W 36–7'},
-    {r:5,opp:'Mosman Dolphins',result:'W 43–5'},{r:6,opp:'Hornsby Lions',result:'Washout'},
-    {r:7,opp:'Allambie Green',result:''},{r:8,opp:'Hunters Hill Black',result:''},
-    {r:9,opp:'Norths Pirates',result:''},{r:10,opp:'Wakehurst',result:''}
-  ];
+  // Fixtures come from fixtures.js (the single source of truth) — never hard-code
+  // rounds/results here or the season tab silently stops at old data. liveResults
+  // (results entered via Match Stats) still override the static result below.
+  const friFixtures = SEASON_FIXTURES.seahorses.map(f => ({ r:f.round, opp:f.opponent, result:f.result }));
+  const sunFixtures = SEASON_FIXTURES.barbarians.map(f => ({ r:f.round, opp:f.opponent, result:f.result }));
 
   function resultPill(r) {
     if (!r) return '';

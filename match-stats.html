@@ -457,9 +457,13 @@ function populateRounds() {
   const fixtures = FIXTURES[currentTeam];
   sel.innerHTML = '<option value="">Select round…</option>' +
     fixtures.map(f => `<option value="${f.round}">Round ${f.round} — ${f.opponent} (${f.date})${f.result?' · '+f.result:''}</option>`).join('');
-  // Auto-select most recent played round
-  const played = fixtures.filter(f => f.result);
-  if (played.length) sel.value = played[played.length-1].round;
+  // Auto-select the current round: the most recently played match (latest
+  // fixture on or before today). Driven by date, NOT by whether the result has
+  // been filled into fixtures.js yet — otherwise it sticks on the last recorded
+  // round instead of the game you just played.
+  const today = new Date(); today.setHours(23,59,59,999);
+  const past = fixtures.filter(f => new Date(f.isoDate) <= today);
+  sel.value = String(past.length ? past[past.length-1].round : fixtures[0].round);
   updateMatchInfo();
 }
 
@@ -711,9 +715,10 @@ document.getElementById('submit-btn').addEventListener('click', async () => {
         team: currentTeam === 'seahorses' ? 'Coogee 11' : 'Coogee Barbarians 11',
         date: fixture ? fixture.isoDate : '',
         opponent: fixture ? fixture.opponent : '',
-        records,
-        screenshotsBase64: screenshotImages,                    // new: all screenshots
-        screenshotBase64: screenshotImages[0] || null            // back-compat: first
+        records
+        // NOTE: screenshots are deliberately NOT re-sent here. They were already
+        // uploaded during "Analyse Screenshots". Re-posting several MB of base64
+        // on every save made the page hang/freeze while saving.
       })
     });
     const data = await res.json();

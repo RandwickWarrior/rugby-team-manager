@@ -137,21 +137,8 @@
     <div class="session-label">Training session</div>
     <select class="session-select" id="session-select">
       <option value="">Select session…</option>
-      <option value="2026-03-11">Wed 11 Mar 2026 — Session 1</option>
-      <option value="2026-03-18">Wed 18 Mar 2026 — Session 2</option>
-      <option value="2026-03-25">Wed 25 Mar 2026 — Session 3</option>
-      <option value="2026-04-01">Wed 1 Apr 2026 — Session 4</option>
-      <option value="2026-04-08">Wed 8 Apr 2026 — Session 5</option>
-      <option value="2026-04-15">Wed 15 Apr 2026 — Session 6</option>
-      <option value="2026-04-22">Wed 22 Apr 2026 — Session 7</option>
-      <option value="2026-04-29">Wed 29 Apr 2026 — Session 8</option>
-      <option value="2026-05-06">Wed 6 May 2026 — Session 9</option>
-      <option value="2026-05-13">Wed 13 May 2026 — Session 10</option>
-      <option value="2026-05-20">Wed 20 May 2026 — Session 11</option>
-      <option value="2026-05-27">Wed 27 May 2026 — Session 12</option>
-      <option value="2026-06-03">Wed 3 Jun 2026 — Session 13</option>
-      <option value="2026-06-10">Wed 10 Jun 2026 — Session 14</option>
-      <option value="2026-06-17">Wed 17 Jun 2026 — Session 15</option>
+      <!-- Weekly Wednesday sessions are generated in JS (season start → last
+           fixture date) so the list never needs manual updating. See below. -->
       <option value="custom">Other date…</option>
     </select>
     <input type="date" class="custom-date" id="custom-date" placeholder="Select date">
@@ -203,6 +190,7 @@
 
 </div>
 
+<script src="fixtures.js"></script>
 <script>
   const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw4qLLU0jH1BrDDFlncAhqGBowhDQQH6p0FtSN9SP7GqLLk44dw52l9BA_sjOQNDk7O/exec';
 
@@ -252,17 +240,45 @@
     setTimeout(() => t.classList.remove('show'), 2200);
   }
 
+  // Local (not UTC) YYYY-MM-DD — toISOString() would shift AEST dates back a day
+  function localISO(dt){ const y=dt.getFullYear(),m=String(dt.getMonth()+1).padStart(2,'0'),d=String(dt.getDate()).padStart(2,'0'); return `${y}-${m}-${d}`; }
+
   // Auto-select most recent past Wednesday
   function getMostRecentWednesday() {
     const today = new Date();
     const day = today.getDay(); // 0=Sun, 3=Wed
     const diff = (day >= 3) ? day - 3 : day + 4;
     const wed = new Date(today); wed.setDate(today.getDate() - diff);
-    return wed.toISOString().split('T')[0];
+    return localISO(wed);
   }
 
   const sessionSelect = document.getElementById('session-select');
   const customDate = document.getElementById('custom-date');
+
+  // Build the weekly Wednesday session list dynamically: every Wednesday from
+  // the season start (11 Mar 2026) through the last fixture date in fixtures.js.
+  // Extends automatically when new rounds (or finals) are added — no hand-editing.
+  (function buildSessionOptions() {
+    const start = new Date(2026, 2, 11); // Wed 11 Mar 2026 (month is 0-based)
+    let end;
+    try {
+      const isos = [...SEASON_FIXTURES.seahorses, ...SEASON_FIXTURES.barbarians]
+        .map(f => f.isoDate).filter(Boolean).sort();
+      const [ey, em, ed] = isos[isos.length - 1].split('-').map(Number);
+      end = new Date(ey, em - 1, ed);
+    } catch (e) { end = new Date(2026, 7, 26); } // fallback: late Aug
+    const wd = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const customOpt = sessionSelect.querySelector('option[value="custom"]');
+    let d = new Date(start), n = 1, html = '';
+    while (d <= end) {
+      const label = `${wd[d.getDay()]} ${d.getDate()} ${mo[d.getMonth()]} ${d.getFullYear()} — Session ${n}`;
+      html += `<option value="${localISO(d)}">${label}</option>`;
+      d = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7); n++;
+    }
+    customOpt.insertAdjacentHTML('beforebegin', html);
+  })();
+
   const mostRecent = getMostRecentWednesday();
 
   // Auto-select matching session if today is a Wednesday or find most recent
