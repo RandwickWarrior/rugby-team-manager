@@ -24,8 +24,9 @@ longer the final round.
     R12 Sun 16 Aug v Mosman Dolphins, R13 Sun 23 Aug v Hornsby Lions.
 
 **R13 is the last round of the regular season** (Fri 21 Aug / Sun 23 Aug).
-**Finals may follow** — if a finals draw is published, add those matches to
-`fixtures.js` too (continue the round numbering, or label them as finals).
+**Finals** continue the round numbering with the stage in the opponent field,
+e.g. Barbarians **R14** = Sun 30 Aug v `Hornsby Lions (Semi Final)` (venue/time
+TBC). Add further finals the same way as they are confirmed.
 
 **Immediate next steps:**
 1. All rounds through R9 are now recorded (Seahorses R9 W 59–19, Barbarians R9
