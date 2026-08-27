@@ -24,9 +24,13 @@ longer the final round.
     R12 Sun 16 Aug v Mosman Dolphins, R13 Sun 23 Aug v Hornsby Lions.
 
 **R13 is the last round of the regular season** (Fri 21 Aug / Sun 23 Aug).
-**Finals** continue the round numbering with the stage in the opponent field,
-e.g. Barbarians **R14** = Sun 30 Aug v `Hornsby Lions (Semi Final)` (venue/time
-TBC). Add further finals the same way as they are confirmed.
+**Finals** continue the round numbering with the stage in the opponent field:
+- Barbarians **R14** = Sun 30 Aug, 10:00am, Nagle Park Field 1 v
+  `Hornsby Lions (Semi Final)`.
+- Barbarians **R15** = Sun 6 Sep v `Grand Final (TBC)` — placeholder, opponent /
+  venue / time all TBC (confirm if the Barbarians win the semi).
+
+Add further finals the same way as they are confirmed.
 
 **Immediate next steps:**
 1. All rounds through R9 are now recorded (Seahorses R9 W 59–19, Barbarians R9
