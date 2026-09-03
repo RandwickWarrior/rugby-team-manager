@@ -27,8 +27,8 @@ longer the final round.
 **Finals** continue the round numbering with the stage in the opponent field:
 - Barbarians **R14** = Sun 30 Aug, 10:00am, Nagle Park Field 1 v
   `Hornsby Lions (Semi Final)`.
-- Barbarians **R15** = Sun 6 Sep v `Grand Final (TBC)` — placeholder, opponent /
-  venue / time all TBC (confirm if the Barbarians win the semi).
+- Barbarians **R15** = Sun 6 Sep, 11:10am, Granville Park Field 2 v
+  `Hunters Hill (Grand Final)`.
 
 Add further finals the same way as they are confirmed.
 

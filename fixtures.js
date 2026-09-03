@@ -32,6 +32,6 @@ const SEASON_FIXTURES = {
     { round:12, isoDate:'2026-08-16', opponent:'Mosman Dolphins',       date:'Sun 16 Aug',  venue:'Rawson Oval',               time:'10:20am', result:'' },
     { round:13, isoDate:'2026-08-23', opponent:'Hornsby Lions',         date:'Sun 23 Aug',  venue:'Nagle Park Field 2',        time:'9:30am',  result:'' },
     { round:14, isoDate:'2026-08-30', opponent:'Hornsby Lions (Semi Final)', date:'Sun 30 Aug',  venue:'Nagle Park Field 1',        time:'10:00am', result:'' },
-    { round:15, isoDate:'2026-09-06', opponent:'Grand Final (TBC)',      date:'Sun 6 Sep',   venue:'Granville Park Field 2',    time:'11:10am', result:'' },
+    { round:15, isoDate:'2026-09-06', opponent:'Hunters Hill (Grand Final)', date:'Sun 6 Sep',   venue:'Granville Park Field 2',    time:'11:10am', result:'' },
   ]
 };
