@@ -28,7 +28,7 @@ longer the final round.
 - Barbarians **R14** = Sun 30 Aug, 10:00am, Nagle Park Field 1 v
   `Hornsby Lions (Semi Final)`.
 - Barbarians **R15** = Sun 6 Sep, 11:10am, Granville Park Field 2 v
-  `Hunters Hill (Grand Final)`.
+  `Hunters Hill Black (Grand Final)`.
 
 Add further finals the same way as they are confirmed.
 
